@@ -143,9 +143,12 @@ export default function Editor() {
           aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
           onDragStart={(event) => {
             event.dataTransfer.setData('application/floorx-component', definition.id);
+            event.dataTransfer.setData('text/plain', definition.id);
             event.dataTransfer.effectAllowed = 'copy';
             const image = createFixtureDragImage(snapshot.defaultDimensions, store.getState().viewport.scale, definition.id);
-            if (image) event.dataTransfer.setDragImage(image.canvas, image.offsetX, image.offsetY);
+            if (image) {
+              event.dataTransfer.setDragImage(image.canvas, image.offsetX, image.offsetY);
+            }
           }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;

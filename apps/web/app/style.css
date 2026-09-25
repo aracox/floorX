@@ -48,6 +48,7 @@ button:focus-visible, a:focus-visible, .import-button:focus-within { outline: 2p
 .editor .panel-heading { padding: 18px; }
 .editor h2 { font-size: 14px; }
 .palette-card { margin: 0 14px 20px; padding: 16px 12px; background: #f3f7f3; border: 1px solid #dce5dd; border-radius: 9px; cursor: grab; }
+.palette-card * { pointer-events: none; }
 .palette-card strong { display: block; font-size: 12px; margin-top: 16px; }
 .palette-card p { font-size: 11px; margin: 5px 0 12px; }
 .palette-card:active { cursor: grabbing; }
