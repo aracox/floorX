@@ -94,7 +94,12 @@ export default function Editor() {
         const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
         return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
           aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
-          onDragStart={(event) => { event.dataTransfer.setData('application/floorx-component', definition.id); event.dataTransfer.effectAllowed = 'copy'; }}
+          onDragStart={(event) => {
+            event.dataTransfer.setData('application/floorx-component', definition.id);
+            event.dataTransfer.effectAllowed = 'copy';
+            const icon = event.currentTarget.querySelector<HTMLElement>('.fixture-icon');
+            if (icon) event.dataTransfer.setDragImage(icon, icon.offsetWidth / 2, icon.offsetHeight / 2);
+          }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
@@ -113,7 +118,7 @@ export default function Editor() {
       })}</ul></aside>
       <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">2D PLAN</span><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></div>
         <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onError={(message) => report(message, true)} />
-        <div className="canvas-footer"><span>Scroll to zoom · Pan tool to move the view</span><span>Drag handles to resize or rotate · Esc cancels · ⌘/Ctrl Z undoes</span></div>
+        <div className="canvas-footer"><span>⌘/Ctrl + drag empty space to pan · ⌘/Ctrl + scroll to zoom · Pan tool: drag freely</span><span>Drag handles to resize or rotate · Esc cancels · ⌘/Ctrl Z undoes</span></div>
       </section>
       <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}
         name={state.document.definitions.find((item) => item.id === selected.definition.id && item.version === selected.definition.version)?.name ?? 'Fixture'} onApply={(changes) => {

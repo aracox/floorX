@@ -70,13 +70,18 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
       onAdd(definitionId, screenToFloor({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, store.getState().viewport));
     }}>
     <Stage ref={stage} width={size.width} height={size.height} x={view.x} y={view.y} scaleX={view.scale} scaleY={view.scale} draggable={tool === 'pan'}
-      onMouseDown={() => { if (tool === 'select') state.select(null); }}
+      onMouseDown={(event) => {
+        if (tool !== 'select') return;
+        state.select(null);
+        if (event.evt.button === 0 && (event.evt.metaKey || event.evt.ctrlKey)) stage.current?.startDrag(event);
+      }}
       onTouchStart={() => { if (tool === 'select') state.select(null); }}
       onDragEnd={(event) => {
         if (event.target !== stage.current) return;
         state.setViewport({ ...view, x: event.target.x(), y: event.target.y() });
       }}
       onWheel={(event) => {
+        if (!event.evt.metaKey && !event.evt.ctrlKey) return;
         event.evt.preventDefault();
         if (store.getState().move || cancelTransform.current || stage.current?.isDragging()) return;
         const pointer = stage.current?.getPointerPosition();
