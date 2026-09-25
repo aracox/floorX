@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import Konva from 'konva';
-import { Stage, Layer, Group, Rect, Line, Path, Text } from 'react-konva';
+import { Stage, Layer, Line, Path, Text } from 'react-konva';
 import { fitViewport, screenToFloor, zoomAt, type EditorStore } from '@floorx/state';
 import { type Point } from '@floorx/floor-model';
+import { fixtureCatalog } from '@floorx/component-library';
+import FixtureShape from './fixture-shape';
 
 const path = (rings: Point[][]) => rings.map((ring) => `M ${ring.map((p) => `${p.x},${p.z}`).join(' L ')} Z`).join(' ');
 export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
-  store: EditorStore; tool: 'select' | 'pan'; onAdd: (point: Point) => void;
+  store: EditorStore; tool: 'select' | 'pan'; onAdd: (definitionId: string, point: Point) => void;
   onSize: (size: { width: number; height: number }) => void; onError: (message: string) => void;
 }) {
   const state = useStore(store);
@@ -17,6 +19,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
   const stage = useRef<Konva.Stage>(null);
   const fitted = useRef(false);
   const active = useRef<Konva.Node | null>(null);
+  const cancelTransform = useRef<(() => void) | null>(null);
   const [size, setSize] = useState({ width: 800, height: 560 });
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
@@ -32,6 +35,8 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
   }, [onSize, store]);
 
   function cancelDrag() {
+    cancelTransform.current?.();
+    cancelTransform.current = null;
     const node = active.current;
     const id = store.getState().move?.id;
     const fixture = store.getState().document.fixtures.find((f) => f.id === id);
@@ -59,9 +64,10 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
     onDragOver={(event) => { if (event.dataTransfer.types.includes('application/floorx-component')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }}
     onDrop={(event) => {
       event.preventDefault();
-      if (event.dataTransfer.getData('application/floorx-component') !== 'gondola') return;
+      const definitionId = event.dataTransfer.getData('application/floorx-component');
+      if (!fixtureCatalog.some((definition) => definition.id === definitionId)) return;
       const bounds = event.currentTarget.getBoundingClientRect();
-      onAdd(screenToFloor({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, store.getState().viewport));
+      onAdd(definitionId, screenToFloor({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, store.getState().viewport));
     }}>
     <Stage ref={stage} width={size.width} height={size.height} x={view.x} y={view.y} scaleX={view.scale} scaleY={view.scale} draggable={tool === 'pan'}
       onMouseDown={() => { if (tool === 'select') state.select(null); }}
@@ -72,7 +78,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
       }}
       onWheel={(event) => {
         event.evt.preventDefault();
-        if (store.getState().move || stage.current?.isDragging()) return;
+        if (store.getState().move || cancelTransform.current || stage.current?.isDragging()) return;
         const pointer = stage.current?.getPointerPosition();
         if (pointer) state.setViewport(zoomAt(store.getState().viewport, pointer, Math.exp(-Math.max(-100, Math.min(100, event.evt.deltaY)) * 0.005)));
       }}>
@@ -91,31 +97,39 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
         {state.document.fixtures.map((fixture, index) => {
           const position = state.move?.id === fixture.id ? state.move.position : fixture.position;
           const selected = fixture.id === state.selectedId;
-          const { width, depth } = fixture.dimensions;
-          return <Group key={fixture.id} x={position.x} y={position.z} rotation={fixture.rotation * 180 / Math.PI} draggable={tool === 'select'} _useStrictMode
-            onMouseDown={(event) => { if (tool === 'select') { event.cancelBubble = true; state.select(fixture.id); } }}
-            onTouchStart={(event) => { if (tool === 'select') { event.cancelBubble = true; state.select(fixture.id); } }}
-            onDragStart={(event) => { event.cancelBubble = true; active.current = event.target; state.beginMove(fixture.id); }}
-            onDragMove={(event) => { event.cancelBubble = true; state.previewMove({ x: event.target.x(), z: event.target.y() }); }}
-            onDragEnd={(event) => {
-              event.cancelBubble = true;
+          const fill = {
+            gondola: '#80b5a4', 'wall-shelf': '#82a9c4', rack: '#bdad85',
+            freezer: '#83b9d2', checkout: '#a7a2cf', 'promotion-island': '#d7aa73',
+          }[fixture.definition.id] ?? '#80b5a4';
+          return <FixtureShape key={fixture.id} fixture={fixture} position={position} selected={selected}
+            editable={tool === 'select'} pixelsPerMeter={view.scale} fill={fill}
+            onSelect={() => state.select(fixture.id)}
+            onMoveStart={(node) => { active.current = node; state.beginMove(fixture.id); }}
+            onMovePreview={(point) => state.previewMove(point)}
+            onMoveEnd={(node) => {
               try {
                 if (store.getState().move) {
-                  state.previewMove({ x: event.target.x(), z: event.target.y() });
+                  state.previewMove({ x: node.x(), z: node.y() });
                   state.finishMove();
                 }
               } catch { onError('That position is outside the supported model range. The fixture was restored.'); }
               finally {
                 active.current = null;
-                const saved = store.getState().document.fixtures.find((f) => f.id === fixture.id)!;
-                event.target.position({ x: saved.position.x, y: saved.position.z });
+                const saved = store.getState().document.fixtures.find((item) => item.id === fixture.id)!;
+                node.position({ x: saved.position.x, y: saved.position.z });
               }
-            }}>
-            <Rect x={-width / 2} y={-depth / 2} width={width} height={depth} fill={selected ? '#277f68' : '#80b5a4'} stroke={selected ? '#123e32' : '#4d8976'} strokeWidth={(selected ? 2 : 1) / view.scale} shadowColor="#123e32" shadowOpacity={0.12} shadowBlur={selected ? 6 / view.scale : 0} />
-            <Line points={[-width / 2, 0, width / 2, 0]} stroke="#d5e9e0" strokeWidth={1 / view.scale} listening={false} />
-            {selected && <Rect x={-width / 2 - 4 / view.scale} y={-depth / 2 - 4 / view.scale} width={width + 8 / view.scale} height={depth + 8 / view.scale} stroke="#236d59" strokeWidth={1 / view.scale} dash={[4 / view.scale, 3 / view.scale]} listening={false} />}
-            <Text text={`G${index + 1}`} x={-width / 2} y={depth / 2 + 6 / view.scale} fontSize={11 / view.scale} fill="#456456" listening={false} />
-          </Group>;
+            }}
+            onTransformStart={(cancel) => { cancelTransform.current = cancel; }}
+            onTransformEnd={(changes) => state.updateFixture(fixture.id, changes)}
+            onTransformFinish={() => { cancelTransform.current = null; }}
+            onError={onError} />;
+        })}
+        {state.document.fixtures.map((fixture, index) => {
+          const position = state.move?.id === fixture.id ? state.move.position : fixture.position;
+          const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
+          return <Text key={`label-${fixture.id}`} text={`${name} ${index + 1}`}
+            x={position.x - fixture.dimensions.width / 2} y={position.z + fixture.dimensions.depth / 2 + 7 / view.scale}
+            fontSize={11 / view.scale} fill="#456456" listening={false} />;
         })}
       </Layer>
     </Stage>

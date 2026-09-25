@@ -33,7 +33,6 @@ button:hover { filter: brightness(1.1); }
 /* Interactive editor */
 .editor { max-width: 1800px; padding: 0 28px 24px; }
 .editor header { height: 70px; }
-.editor nav a { color: #567467; font-size: 12px; text-decoration: none; }
 .editor-title { display: flex; align-items: center; justify-content: space-between; padding: 25px 0 20px; gap: 20px; }
 .editor-title h1 { font-size: 28px; margin: 8px 0; }
 .editor-title p { margin: 0; }
@@ -53,8 +52,8 @@ button:focus-visible, a:focus-visible, .import-button:focus-within { outline: 2p
 .palette-card { margin: 0 14px 20px; padding: 16px 12px; background: #f3f7f3; border: 1px solid #dce5dd; border-radius: 9px; cursor: grab; }
 .palette-card strong { display: block; font-size: 12px; margin-top: 16px; }
 .palette-card p { font-size: 11px; margin: 5px 0 12px; }
-.palette-card button { width: 100%; }
-.palette-card small { display: block; text-align: center; font-size: 10px; color: #75877b; margin-top: 10px; }
+.palette-card:active { cursor: grabbing; }
+.palette-card:focus-visible { outline: 2px solid #267a61; outline-offset: 2px; }
 .fixture-icon { display: flex; border: 2px solid #346f5d; border-radius: 2px; height: 30px; background: #a4c9ba; }
 .fixture-icon i { flex: 1; border-right: 1px solid #346f5d; }
 .fixture-icon i:last-child { border: 0; }
@@ -90,4 +89,13 @@ button:focus-visible, a:focus-visible, .import-button:focus-within { outline: 2p
 .local-note p { font-size: 11px; margin: 7px 0 0; }
 .editor-status { margin: 16px 0 0; font-size: 12px; }
 @media (max-width: 1100px) { .editor-workspace { grid-template-columns: 170px minmax(280px, 1fr); } .properties { grid-column: 1 / -1; } .property-form { max-width: 500px; } .save-actions { margin-left: 0; } }
-@media (max-width: 650px) { .editor { padding: 0 12px 20px; } .editor-workspace { grid-template-columns: minmax(0, 1fr); } .library { display: grid; grid-template-columns: 1fr 1fr; } .library .panel-heading { display: none; } .palette-card { margin: 12px; } .fixture-list { padding-top: 12px; } .editor-title { align-items: flex-start; flex-direction: column; gap: 12px; } .editor nav { margin-left: auto; } .editor header { gap: 12px; } }
+@media (max-width: 650px) { .editor { padding: 0 12px 20px; } .editor-workspace { grid-template-columns: minmax(0, 1fr); } .library { display: grid; grid-template-columns: 1fr 1fr; } .library .panel-heading { display: none; } .palette-card { margin: 12px; } .fixture-list { padding-top: 12px; } .editor-title { align-items: flex-start; flex-direction: column; gap: 12px; } .editor header { gap: 12px; } }
+
+.palette-items { max-height: 450px; overflow-y: auto; padding-bottom: 4px; }
+.palette-card { margin-bottom: 10px; }
+.fixture-wall-shelf { background: #b8d1e2; border-color: #5a83a3; }
+.fixture-rack { background: #d3c6a6; border-color: #94805a; }
+.fixture-freezer { background: #add4e5; border-color: #5b9cb8; }
+.fixture-checkout { background: #c7c2e2; border-color: #817bb1; }
+.fixture-promotion-island { background: #ecd2ae; border-color: #ac854e; }
+.property-name { display: block; font-size: 13px; margin-bottom: 7px; }

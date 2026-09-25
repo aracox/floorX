@@ -6,6 +6,7 @@ import { useStore } from 'zustand';
 import { createEditorStore, fitViewport, screenToFloor, zoomAt } from '@floorx/state';
 import { deserializeFloorDocument, parseFloorDocument, serializeFloorDocument, type Point } from '@floorx/floor-model';
 import sample from '../../../fixtures/floor-v1.json';
+import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
 import { readLocalLayout, saveLocalLayout } from './local-layout';
 
@@ -13,24 +14,25 @@ const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
 });
 const initial = parseFloorDocument(sample);
-const gondola = initial.definitions[0];
 
 export default function Editor() {
   const [store] = useState(() => createEditorStore(initial));
   const state = useStore(store);
   const [tool, setTool] = useState<'select' | 'pan'>('select');
-  const [message, setMessage] = useState('Ready. Add a gondola or select a fixture to get started.');
+  const [message, setMessage] = useState('Ready. Add a fixture or select one to get started.');
   const [error, setError] = useState(false);
   const [size, setSize] = useState({ width: 800, height: 560 });
   const dirty = serializeFloorDocument(state.document) !== state.savedJson;
   const selected = state.document.fixtures.find((f) => f.id === state.selectedId);
 
   function report(message: string, error = false) { setMessage(message); setError(error); }
-  function add(position: Point) {
+  function add(definitionId: string, position: Point) {
     try {
-      state.addFixture(`fixture-${crypto.randomUUID()}`, gondola, position);
+      const definition = fixtureCatalog.find((item) => item.id === definitionId);
+      if (!definition) throw new Error('Unknown fixture type');
+      state.addFixture(`fixture-${crypto.randomUUID()}`, definition, position);
       setTool('select');
-      report('Gondola added. Drag it or edit its properties.');
+      report(`${definition.name} added. Drag it or edit its properties.`);
     } catch (cause) { report(cause instanceof Error ? cause.message : 'Unable to add fixture.', true); }
   }
   function zoom(factor: number) {
@@ -88,14 +90,33 @@ export default function Editor() {
       }} /></label></div>
     </div>
     <div className="editor-workspace">
-      <aside className="panel library"><div className="panel-heading"><h2>Components</h2></div><div className="palette-card" draggable onDragStart={(event) => { event.dataTransfer.setData('application/floorx-component', 'gondola'); event.dataTransfer.effectAllowed = 'copy'; }}>
-        <div className="fixture-icon" aria-hidden="true"><i /><i /><i /></div><strong>Standard gondola</strong><p>4 × 0.8 × 1.8 m</p><button onClick={() => add(screenToFloor({ x: size.width / 2, y: size.height / 2 }, state.viewport))}>Add gondola</button><small>Or drag this card onto the floor</small>
-      </div><div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div><ul className="fixture-list">{state.document.fixtures.map((fixture, index) => <li key={fixture.id}><button className={fixture.id === state.selectedId ? 'selected' : 'secondary'} aria-pressed={fixture.id === state.selectedId} onClick={() => { state.select(fixture.id); setTool('select'); }}><span>Gondola {index + 1}</span><small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>)}</ul></aside>
+      <aside className="panel library"><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
+        const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
+        return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
+          aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
+          onDragStart={(event) => { event.dataTransfer.setData('application/floorx-component', definition.id); event.dataTransfer.effectAllowed = 'copy'; }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            add(definition.id, screenToFloor({ x: size.width / 2, y: size.height / 2 }, state.viewport));
+          }}>
+          <div className={`fixture-icon fixture-${definition.id}`} aria-hidden="true"><i /><i /><i /></div>
+          <strong>{snapshot.name}</strong>
+          <p>{snapshot.defaultDimensions.width} × {snapshot.defaultDimensions.depth} × {snapshot.defaultDimensions.height} m</p>
+        </div>;
+      })}</div><div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div>
+      <ul className="fixture-list">{state.document.fixtures.map((fixture, index) => {
+        const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
+        return <li key={fixture.id}><button className={fixture.id === state.selectedId ? 'selected' : 'secondary'} aria-pressed={fixture.id === state.selectedId}
+          onClick={() => { state.select(fixture.id); setTool('select'); }}><span>{name} {index + 1}</span>
+          <small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>;
+      })}</ul></aside>
       <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">2D PLAN</span><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></div>
         <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onError={(message) => report(message, true)} />
-        <div className="canvas-footer"><span>Scroll to zoom · Pan tool to move the view</span><span>Esc cancels a drag · ⌘/Ctrl Z undoes</span></div>
+        <div className="canvas-footer"><span>Scroll to zoom · Pan tool to move the view</span><span>Drag handles to resize or rotate · Esc cancels · ⌘/Ctrl Z undoes</span></div>
       </section>
-      <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected} onApply={(changes) => {
+      <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}
+        name={state.document.definitions.find((item) => item.id === selected.definition.id && item.version === selected.definition.version)?.name ?? 'Fixture'} onApply={(changes) => {
         state.updateFixture(selected.id, changes); report('Fixture properties updated.');
       }} onDelete={() => { state.removeSelected(); report('Fixture removed. Undo is available.'); }} /> : <div className="empty-selection"><div aria-hidden="true">↖</div><h3>Select a fixture</h3><p>Click a fixture on the floor or choose one from the list to edit its properties.</p></div>}<div className="local-note"><strong>Saved on this browser</strong><p>Use Save locally before closing. Load saved restores it after a reload. Export JSON to keep a portable copy.</p></div></aside>
     </div>

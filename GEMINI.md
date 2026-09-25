@@ -4,7 +4,7 @@
 
 floorX is a web-based sales-floor digital twin. Read `plan.md` for the product brief and `docs/preparation.md` for its analysis, proposed milestones, and pending decisions.
 
-The user authorized implementation on 2026-09-25. Milestones A (model contract) and B (first editor slice) are implemented; follow the documented delivery sequence in `docs/preparation.md`. Create only packages needed for the active milestone. Do not request permission again for implementation work already authorized; keep later product phases out of the active deliverable.
+The user authorized implementation on 2026-09-25. Milestones A (model contract) and B (first editor slice) are implemented; milestone C has started with the versioned fixture catalog and canvas resize/rotation controls; follow the documented delivery sequence in `docs/preparation.md`. Create only packages needed for the active milestone. Do not request permission again for implementation work already authorized; keep later product phases out of the active deliverable.
 
 The pnpm workspace contains the pure TypeScript floor model and Vitest tests. `pnpm test` and `pnpm typecheck` are the configured checks. A Next.js/React Konva editor lives in `apps/web`, with controls and verification in `docs/editor-milestone.md`; start it with `pnpm dev`. There is no backend or Git repository yet. Do not claim browser/API checks passed before those surfaces exist. Record actual commands when tooling is introduced.
 

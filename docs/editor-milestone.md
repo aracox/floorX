@@ -4,7 +4,7 @@ The `/` route provides a React Konva editor backed by `@floorx/state` (Zustand).
 
 ## Controls
 
-- Add gondola places one at the viewport center; dragging the palette card places its footprint center at the drop point. Each instance gets a unique ID and a pinned definition snapshot.
+- Dragging a palette card places its footprint center at the drop point; pressing Enter or Space on a focused card places one at the viewport center. Each instance gets a unique ID and a pinned definition snapshot.
 - Select a fixture on the canvas or in the keyboard-accessible list. Drag to move it. Change X/Z, width/depth/height or rotation in the properties form, then choose Apply properties. Position and dimensions are meters; displayed rotation is clockwise degrees, persisted as normalized radians.
 - Pan tool drags the viewport. Wheel zoom stays anchored to the pointer; toolbar zoom stays anchored to the viewport center. Fit floor frames the boundary. Pan and zoom never change saved geometry or history.
 - Undo/redo buttons and Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z or Ctrl+Y restore document edits. Delete/Backspace removes a selected fixture. Shortcuts operate within the editor and ignore inputs, textareas, selects and editable text. Escape cancels an active fixture drag and clears selection. Escape can also cancel a canvas pan.

@@ -17,6 +17,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@floorx/component-library':
+        specifier: workspace:*
+        version: link:../../packages/component-library
       '@floorx/floor-model':
         specifier: workspace:*
         version: link:../../packages/floor-model
@@ -54,6 +57,12 @@ importers:
       typescript:
         specifier: 5.9.3
         version: 5.9.3
+
+  packages/component-library:
+    dependencies:
+      '@floorx/floor-model':
+        specifier: workspace:*
+        version: link:../floor-model
 
   packages/floor-model:
     dependencies:

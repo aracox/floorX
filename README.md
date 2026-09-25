@@ -1,6 +1,6 @@
 # floorX
 
-A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model and an interactive 2D floor editor. API persistence and the broader planner toolset are later milestones.
+A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model, a versioned fixture catalog and an interactive 2D floor editor. API persistence and the broader planner toolset are later milestones.
 
 ## Development
 
@@ -21,13 +21,14 @@ npm exec --yes --package=pnpm@10.32.1 -- pnpm test
 
 ## Try the editor
 
-Open http://127.0.0.1:3000 after starting `pnpm dev`. Add or drag a gondola from the palette, select and move it on the floor, then edit its properties. Use Undo/Redo for document edits and Pan/zoom for the view. Save locally keeps the layout in this browser; after reloading, choose Load saved. Export/import JSON moves documents between browsers.
+Open http://127.0.0.1:3000 after starting `pnpm dev`. Drag a fixture card from the palette onto the floor, select and move it, use its handles to resize or rotate it, then edit its numeric properties if needed. Keyboard users can focus a fixture card and press Enter or Space to place it at the view center. Use Undo/Redo for document edits and Pan/zoom for the view. Save locally keeps the layout in this browser; after reloading, choose Load saved. Export/import JSON moves documents between browsers.
 
-The separate model inspector is at `/model`. See `docs/editor-milestone.md` for controls, scope and verification.
+The separate model inspector is at `/model`. See `docs/editor-milestone.md` for the first editor slice and `docs/component-editor-increment.md` for the catalog and transform handles.
 
 ## Current implementation
 
 - `packages/floor-model`: Zod schemas, inferred TypeScript types, strict document parsing, JSON serialization and pure coordinate helpers.
+- `packages/component-library`: stable fixture definitions and default dimensions/properties.
 - `packages/state`: validated commands, transaction history, selection/drag state and pure viewport mapping.
 - `apps/web`: Next.js editor, React Konva canvas, local save/load and model inspector.
 - `fixtures/floor-v1.json`: sample floor with a versioned gondola, wall, entrance and boundary hole.

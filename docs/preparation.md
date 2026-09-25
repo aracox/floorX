@@ -1,6 +1,6 @@
 # floorX preparation and implementation readiness
 
-Status: implementation authorized by the user on 2026-09-25. Milestones A and B are implemented; see `editor-milestone.md` for the editor scope and verification; see `model-contract.md` for adopted conventions and `../README.md` for configured checks. The proposal and historical preparation notes below remain context; they do not describe the current tooling inventory.
+Status: implementation authorized by the user on 2026-09-25. Milestones A and B are implemented, and the first milestone C increment is implemented in `component-editor-increment.md`; see `editor-milestone.md` for the editor scope and verification; see `model-contract.md` for adopted conventions and `../README.md` for configured checks. The proposal and historical preparation notes below remain context; they do not describe the current tooling inventory.
 
 ## Source and assessment
 
