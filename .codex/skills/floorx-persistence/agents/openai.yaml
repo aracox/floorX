@@ -1,0 +1,4 @@
+interface:
+  display_name: "FloorX Persistence"
+  short_description: "Design save contracts and scenario revisions"
+  default_prompt: "Use $floorx-persistence for the requested floorX task, preserving its planning or implementation scope."

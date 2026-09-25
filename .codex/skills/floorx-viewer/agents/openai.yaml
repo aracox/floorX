@@ -1,0 +1,4 @@
+interface:
+  display_name: "FloorX Viewer"
+  short_description: "Keep 3D rendering aligned with the floor model"
+  default_prompt: "Use $floorx-viewer for the requested floorX task, preserving its planning or implementation scope."

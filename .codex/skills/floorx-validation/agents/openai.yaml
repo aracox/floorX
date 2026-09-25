@@ -1,0 +1,4 @@
+interface:
+  display_name: "FloorX Validation"
+  short_description: "Verify spatial rules and editor correctness"
+  default_prompt: "Use $floorx-validation for the requested floorX task, preserving its planning or implementation scope."

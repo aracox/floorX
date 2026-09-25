@@ -1,0 +1,4 @@
+interface:
+  display_name: "FloorX Editor"
+  short_description: "Plan reliable Konva editing and undo history"
+  default_prompt: "Use $floorx-editor for the requested floorX task, preserving its planning or implementation scope."

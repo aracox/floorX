@@ -1,0 +1,4 @@
+interface:
+  display_name: "FloorX Model"
+  short_description: "Define floor schemas and coordinate contracts"
+  default_prompt: "Use $floorx-model for the requested floorX task, preserving its planning or implementation scope."
