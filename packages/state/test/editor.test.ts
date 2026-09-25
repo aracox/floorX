@@ -75,6 +75,106 @@ describe('editor commands and history', () => {
     expect(store.getState().document.fixtures).toHaveLength(1);
   });
 
+  it('moves a multi-selection as one preview and one undoable edit', () => {
+    const store = setup();
+    const definition = store.getState().document.definitions[0];
+    store.getState().addFixture('second', definition, { x: 8, z: 6 });
+    const before = serializeFloorDocument(store.getState().document);
+    const historyLength = store.getState().past.length;
+    store.getState().select('shelf-1');
+    store.getState().select('second', true);
+    expect(store.getState().selectedIds).toEqual(['shelf-1', 'second']);
+    store.getState().beginMove('shelf-1');
+    const start = store.getState().document.fixtures[0].position;
+    store.getState().previewMove({ x: start.x + 2, z: start.z + 3 });
+    expect(serializeFloorDocument(store.getState().document)).toBe(before);
+    expect(store.getState().move?.positions.second).toEqual({ x: 10, z: 9 });
+    store.getState().finishMove();
+    expect(store.getState().past).toHaveLength(historyLength + 1);
+    expect(store.getState().document.fixtures[0].position).toEqual({ x: start.x + 2, z: start.z + 3 });
+    expect(store.getState().document.fixtures[1].position).toEqual({ x: 10, z: 9 });
+    store.getState().undo();
+    expect(serializeFloorDocument(store.getState().document)).toBe(before);
+    store.getState().redo();
+    expect(store.getState().document.fixtures[1].position).toEqual({ x: 10, z: 9 });
+  });
+
+  it('copies and duplicates selected fixtures with fresh IDs and stable definition snapshots', () => {
+    const store = setup();
+    const definition = store.getState().document.definitions[0];
+    store.getState().addFixture('second', definition, { x: 8, z: 6 });
+    store.getState().selectAll();
+    const original = store.getState().document.fixtures.map((fixture) => structuredClone(fixture));
+    const beforeCopy = serializeFloorDocument(store.getState().document);
+    const historyLength = store.getState().past.length;
+    store.getState().copySelected();
+    expect(serializeFloorDocument(store.getState().document)).toBe(beforeCopy);
+    expect(store.getState().past).toHaveLength(historyLength);
+    store.getState().pasteCopied(['paste-1', 'paste-2']);
+    expect(store.getState().selectedIds).toEqual(['paste-1', 'paste-2']);
+    expect(store.getState().document.fixtures[2]).toMatchObject({ ...original[0], id: 'paste-1',
+      position: { x: original[0].position.x + 0.5, z: original[0].position.z + 0.5 } });
+    expect(store.getState().past).toHaveLength(historyLength + 1);
+    store.getState().pasteCopied(['paste-3', 'paste-4']);
+    expect(store.getState().document.fixtures[4].position.x).toBe(original[0].position.x + 1);
+    store.getState().undo();
+    expect(store.getState().document.fixtures).toHaveLength(4);
+    store.getState().select('paste-1');
+    store.getState().select('paste-2', true);
+    store.getState().duplicateSelected(['duplicate-1', 'duplicate-2']);
+    expect(store.getState().document.fixtures).toHaveLength(6);
+    expect(store.getState().document.fixtures[4].position.x).toBe(original[0].position.x + 1);
+    expect(new Set(store.getState().document.fixtures.map((fixture) => fixture.id)).size).toBe(6);
+    store.getState().removeSelected();
+    expect(store.getState().document.fixtures).toHaveLength(4);
+    store.getState().undo();
+    expect(store.getState().document.fixtures).toHaveLength(6);
+  });
+
+  it('toggles additive selection and cancels a group drag without changing the document', () => {
+    const store = setup();
+    store.getState().addFixture('second', store.getState().document.definitions[0], { x: 8, z: 6 });
+    store.getState().selectAll();
+    store.getState().select('second', true);
+    expect(store.getState().selectedIds).toEqual(['shelf-1']);
+    store.getState().select('second', true);
+    const before = serializeFloorDocument(store.getState().document);
+    const historyLength = store.getState().past.length;
+    store.getState().beginMove('shelf-1');
+    store.getState().previewMove({ x: 12, z: 11 });
+    store.getState().cancelMove();
+    store.getState().finishMove();
+    expect(serializeFloorDocument(store.getState().document)).toBe(before);
+    expect(store.getState().past).toHaveLength(historyLength);
+  });
+
+  it('keeps copied definitions available after loading another layout and rejects duplicate IDs atomically', () => {
+    const store = setup();
+    store.getState().select('shelf-1');
+    store.getState().copySelected();
+    const empty = { ...store.getState().document, definitions: [], fixtures: [] };
+    store.getState().load(empty);
+    store.getState().pasteCopied(['restored-copy']);
+    expect(store.getState().document.definitions).toEqual(parseFloorDocument(sample).definitions);
+    expect(store.getState().document.fixtures[0].definition).toEqual({ id: 'gondola', version: 1 });
+    const before = serializeFloorDocument(store.getState().document);
+    const historyLength = store.getState().past.length;
+    expect(() => store.getState().pasteCopied(['restored-copy'])).toThrow();
+    expect(serializeFloorDocument(store.getState().document)).toBe(before);
+    expect(store.getState().past).toHaveLength(historyLength);
+  });
+
+  it('rejects a pasted fixture when its pinned definition conflicts with the destination', () => {
+    const store = setup();
+    store.getState().select('shelf-1');
+    store.getState().copySelected();
+    store.getState().load({ ...store.getState().document, fixtures: [],
+      definitions: [{ ...store.getState().document.definitions[0], name: 'Changed definition' }] });
+    const before = serializeFloorDocument(store.getState().document);
+    expect(() => store.getState().pasteCopied(['copy'])).toThrow('Conflicting component definition snapshot');
+    expect(serializeFloorDocument(store.getState().document)).toBe(before);
+  });
+
   it('loads documents atomically, preserving geometry and allowing undo', () => {
     const store = setup();
     store.getState().updateFixture('shelf-1', { position: { x: 9, z: 3 } });

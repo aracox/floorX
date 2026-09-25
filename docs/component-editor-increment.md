@@ -4,7 +4,7 @@ The editor now offers six rectangular fixture definitions: standard gondola, wal
 
 Selecting a fixture reveals Konva handles for width/depth resizing and rotation. The control scales from the fixture center, disallows flips and rejects invalid dimensions. Konva's transient node scale is converted into model dimensions after the gesture; rotation is converted to normalized radians. A finished gesture commits one document edit, while an ignored or canceled gesture leaves history unchanged. Existing numeric inputs remain the keyboard-accessible way to edit size and angle. The fixed height remains editable in properties because the plan view has no vertical handle.
 
-The interaction is single-fixture only. Snapping, multi-selection, clipboard operations, measurement tools, more building topology types and API persistence remain future work. The palette's fixture colors are presentation hints and are not persisted geometry.
+This increment introduced single-fixture transforms. Multi-selection and clipboard editing were added in `multi-selection-increment.md`; snapping, measurement tools, more building topology types and API persistence remain future work. The palette's fixture colors are presentation hints and are not persisted geometry.
 
 Verification: the catalog and transform unit tests cover unique IDs and versions, rotated asymmetric resize geometry, invalid/negative scales, no-op transforms, multiple fixture types, serialization and undo. The browser check confirmed six catalog entries and a rotated fixture's resize handle changing depth from 0.8 m to 3.925 m; one Undo restored 0.8 m. TypeScript and production-build checks are recorded in the turn output.
 

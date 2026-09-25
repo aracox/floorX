@@ -20,10 +20,10 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
   const fitted = useRef(false);
   const active = useRef<Konva.Node | null>(null);
   const cancelTransform = useRef<(() => void) | null>(null);
-  const [size, setSize] = useState({ width: 800, height: 560 });
+  const [size, setSize] = useState({ width: 800, height: 620 });
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
-      const next = { width: Math.max(1, entry.contentRect.width), height: 560 };
+      const next = { width: Math.max(1, entry.contentRect.width), height: Math.max(1, entry.contentRect.height) };
       setSize(next); onSize(next);
       if (!fitted.current && next.width > 80) {
         store.getState().setViewport(fitViewport(store.getState().document.boundary.outer, next));
@@ -38,7 +38,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
     cancelTransform.current?.();
     cancelTransform.current = null;
     const node = active.current;
-    const id = store.getState().move?.id;
+    const id = store.getState().move?.anchorId;
     const fixture = store.getState().document.fixtures.find((f) => f.id === id);
     store.getState().cancelMove();
     if (node) {
@@ -59,7 +59,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
   for (let x = Math.ceil(topLeft.x / step) * step; x <= bottomRight.x; x += step) vertical.push(x);
   for (let z = Math.ceil(topLeft.z / step) * step; z <= bottomRight.z; z += step) horizontal.push(z);
 
-  return <div className={`floor-canvas ${tool}`} ref={container} tabIndex={0} role="group" aria-label="Interactive floor canvas" onMouseDownCapture={() => container.current?.focus({ preventScroll: true })}
+  return <div className={`floor-canvas ${tool}${state.selectedIds.length ? ' has-selection' : ''}`} ref={container} tabIndex={0} role="group" aria-label="Interactive floor canvas" onMouseDownCapture={() => container.current?.focus({ preventScroll: true })}
     onKeyDown={(event) => { if (event.key === 'Escape') cancelDrag(); }}
     onDragOver={(event) => { if (event.dataTransfer.types.includes('application/floorx-component')) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }}
     onDrop={(event) => {
@@ -100,15 +100,21 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
           return <Line key={opening.id} points={[wall.start.x + ux * opening.offset, wall.start.z + uz * opening.offset, wall.start.x + ux * (opening.offset + opening.width), wall.start.z + uz * (opening.offset + opening.width)]} stroke="#edab54" strokeWidth={wall.thickness * 1.15} listening={false} />;
         })}
         {state.document.fixtures.map((fixture, index) => {
-          const position = state.move?.id === fixture.id ? state.move.position : fixture.position;
-          const selected = fixture.id === state.selectedId;
+          const position = state.move?.positions[fixture.id] ?? fixture.position;
+          const selected = state.selectedIds.includes(fixture.id);
           const fill = {
             gondola: '#80b5a4', 'wall-shelf': '#82a9c4', rack: '#bdad85',
             freezer: '#83b9d2', checkout: '#a7a2cf', 'promotion-island': '#d7aa73',
           }[fixture.definition.id] ?? '#80b5a4';
           return <FixtureShape key={fixture.id} fixture={fixture} position={position} selected={selected}
+            transformable={selected && state.selectedIds.length === 1}
             editable={tool === 'select'} pixelsPerMeter={view.scale} fill={fill}
-            onSelect={() => state.select(fixture.id)}
+            onSelect={(additive) => {
+              const current = store.getState();
+              if (!additive && current.selectedIds.length > 1 && current.selectedIds.includes(fixture.id)) return;
+              current.select(fixture.id, additive);
+            }}
+            onSelectClick={() => state.select(fixture.id)}
             onMoveStart={(node) => { active.current = node; state.beginMove(fixture.id); }}
             onMovePreview={(point) => state.previewMove(point)}
             onMoveEnd={(node) => {
@@ -130,7 +136,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
             onError={onError} />;
         })}
         {state.document.fixtures.map((fixture, index) => {
-          const position = state.move?.id === fixture.id ? state.move.position : fixture.position;
+          const position = state.move?.positions[fixture.id] ?? fixture.position;
           const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
           return <Text key={`label-${fixture.id}`} text={`${name} ${index + 1}`}
             x={position.x - fixture.dimensions.width / 2} y={position.z + fixture.dimensions.depth / 2 + 7 / view.scale}

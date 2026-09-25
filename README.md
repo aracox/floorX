@@ -1,6 +1,6 @@
 # floorX
 
-A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model, a versioned fixture catalog and an interactive 2D floor editor. API persistence and the broader planner toolset are later milestones.
+A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model, a versioned fixture catalog and an interactive 2D floor editor with multi-selection and clipboard editing. API persistence and the broader planner toolset are later milestones.
 
 ## Development
 
@@ -21,9 +21,9 @@ npm exec --yes --package=pnpm@10.32.1 -- pnpm test
 
 ## Try the editor
 
-Open http://127.0.0.1:3000 after starting `pnpm dev`. Drag a fixture card from the palette onto the floor, select and move it, use its handles to resize or rotate it, then edit its numeric properties if needed. Keyboard users can focus a fixture card and press Enter or Space to place it at the view center. Use Undo/Redo for document edits and Pan/zoom for the view. Save locally keeps the layout in this browser; after reloading, choose Load saved. Export/import JSON moves documents between browsers.
+Open http://127.0.0.1:3000 after starting `pnpm dev`. Drag a fixture card from the palette onto the floor, select and move it, use its handles to resize or rotate it, then edit its numeric properties if needed. Shift-click fixtures to select a group and drag it together. Copy, Paste and Duplicate are in the toolbar; Cmd/Ctrl+A, C, V and D provide shortcuts while the editor is focused. Keyboard users can focus a fixture card and press Enter or Space to place it at the view center. Use Undo/Redo for document edits and Cmd/Ctrl-drag to pan or Cmd/Ctrl-scroll to zoom. Save locally keeps the layout in this browser; after reloading, choose Load saved. Export/import JSON moves documents between browsers.
 
-The separate model inspector is at `/model`. See `docs/editor-milestone.md` for the first editor slice and `docs/component-editor-increment.md` for the catalog and transform handles.
+See `docs/editor-milestone.md` for the first editor slice, `docs/component-editor-increment.md` for the catalog and transform handles, and `docs/multi-selection-increment.md` for group editing. The internal copy buffer is local to one editor tab and does not use the operating-system clipboard.
 
 ## Current implementation
 

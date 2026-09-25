@@ -6,15 +6,17 @@ import { Group, Line, Rect, Transformer } from 'react-konva';
 import type { Fixture, Point } from '@floorx/floor-model';
 import { changesFromNodeTransform, hasMeaningfulTransform } from './fixture-transform';
 
-export default function FixtureShape({ fixture, position, selected, editable, pixelsPerMeter, fill, onSelect,
+export default function FixtureShape({ fixture, position, selected, transformable, editable, pixelsPerMeter, fill, onSelect, onSelectClick,
   onMoveStart, onMovePreview, onMoveEnd, onTransformStart, onTransformEnd, onTransformFinish, onError }: {
   fixture: Fixture;
   position: Point;
   selected: boolean;
+  transformable: boolean;
   editable: boolean;
   pixelsPerMeter: number;
   fill: string;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
+  onSelectClick: () => void;
   onMoveStart: (node: Konva.Node) => void;
   onMovePreview: (position: Point) => void;
   onMoveEnd: (node: Konva.Node) => void;
@@ -27,11 +29,11 @@ export default function FixtureShape({ fixture, position, selected, editable, pi
   const cancelled = useRef(false);
   const transformer = useRef<Konva.Transformer>(null);
   useEffect(() => {
-    if (selected && editable && shape.current && transformer.current) {
+    if (transformable && editable && shape.current && transformer.current) {
       transformer.current.nodes([shape.current]);
       transformer.current.getLayer()?.batchDraw();
     }
-  }, [selected, editable, fixture.position, fixture.dimensions, fixture.rotation, pixelsPerMeter]);
+  }, [transformable, editable, fixture.position, fixture.dimensions, fixture.rotation, pixelsPerMeter]);
 
   const reset = (node: Konva.Group) => {
     node.scale({ x: 1, y: 1 });
@@ -43,8 +45,10 @@ export default function FixtureShape({ fixture, position, selected, editable, pi
   return <>
     <Group ref={shape} x={position.x} y={position.z} rotation={fixture.rotation * 180 / Math.PI}
       draggable={editable} _useStrictMode
-      onMouseDown={(event) => { if (editable) { event.cancelBubble = true; onSelect(); } }}
-      onTouchStart={(event) => { if (editable) { event.cancelBubble = true; onSelect(); } }}
+      onMouseDown={(event) => { if (editable) { event.cancelBubble = true; onSelect(event.evt.shiftKey || event.evt.metaKey || event.evt.ctrlKey); } }}
+      onTouchStart={(event) => { if (editable) { event.cancelBubble = true; onSelect(false); } }}
+      onClick={(event) => { if (editable && !event.evt.shiftKey && !event.evt.metaKey && !event.evt.ctrlKey) onSelectClick(); }}
+      onTap={() => { if (editable) onSelectClick(); }}
       onDragStart={(event) => { event.cancelBubble = true; onMoveStart(event.target); }}
       onDragMove={(event) => { event.cancelBubble = true; onMovePreview({ x: event.target.x(), z: event.target.y() }); }}
       onDragEnd={(event) => { event.cancelBubble = true; onMoveEnd(event.target); }}
@@ -76,12 +80,16 @@ export default function FixtureShape({ fixture, position, selected, editable, pi
         }
       }}>
       <Rect x={-width / 2} y={-depth / 2} width={width} height={depth} fill={fill}
-        stroke={selected ? '#123e32' : '#4d8976'} strokeWidth={(selected ? 2 : 1) / pixelsPerMeter}
-        strokeScaleEnabled={false} shadowColor="#123e32" shadowOpacity={0.12}
+        stroke={selected ? '#0b8067' : '#4d8976'} strokeWidth={(selected ? 3 : 1) / pixelsPerMeter}
+        shadowColor="#123e32" shadowOpacity={0.12}
         shadowBlur={selected ? 6 / pixelsPerMeter : 0} />
       <Line points={[-width / 2, 0, width / 2, 0]} stroke="#d5e9e0" strokeWidth={1 / pixelsPerMeter} listening={false} />
+      {selected && !transformable && <Rect x={-width / 2 - 5 / pixelsPerMeter} y={-depth / 2 - 5 / pixelsPerMeter}
+        width={width + 10 / pixelsPerMeter} height={depth + 10 / pixelsPerMeter}
+        stroke="#087c63" strokeWidth={2 / pixelsPerMeter} dash={[6 / pixelsPerMeter, 4 / pixelsPerMeter]}
+        listening={false} />}
     </Group>
-    {selected && editable && <Transformer ref={transformer} flipEnabled={false} centeredScaling
+    {transformable && editable && <Transformer ref={transformer} flipEnabled={false} centeredScaling
       keepRatio={false} useSingleNodeRotation ignoreStroke
       enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
       anchorSize={10} rotateAnchorOffset={26}
