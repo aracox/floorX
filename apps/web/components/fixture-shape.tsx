@@ -5,6 +5,7 @@ import Konva from 'konva';
 import { Group, Line, Rect, Transformer } from 'react-konva';
 import type { Fixture, Point } from '@floorx/floor-model';
 import { changesFromNodeTransform, hasMeaningfulTransform } from './fixture-transform';
+import { fixtureCenterLine, fixtureOutline } from './fixture-appearance';
 
 export default function FixtureShape({ fixture, position, selected, transformable, editable, pixelsPerMeter, fill, onSelect, onSelectClick,
   onContextMenu, onMoveStart, onMovePreview, onMoveEnd, onTransformStart, onTransformEnd, onTransformFinish, onError }: {
@@ -85,10 +86,10 @@ export default function FixtureShape({ fixture, position, selected, transformabl
         }
       }}>
       <Rect x={-width / 2} y={-depth / 2} width={width} height={depth} fill={fill}
-        stroke={selected ? '#0b8067' : '#4d8976'} strokeWidth={(selected ? 3 : 1) / pixelsPerMeter}
+        stroke={selected ? '#0b8067' : fixtureOutline} strokeWidth={(selected ? 3 : 1) / pixelsPerMeter}
         shadowColor="#123e32" shadowOpacity={0.12}
         shadowBlur={selected ? 6 / pixelsPerMeter : 0} />
-      <Line points={[-width / 2, 0, width / 2, 0]} stroke="#d5e9e0" strokeWidth={1 / pixelsPerMeter} listening={false} />
+      <Line points={[-width / 2, 0, width / 2, 0]} stroke={fixtureCenterLine} strokeWidth={1 / pixelsPerMeter} listening={false} />
       {selected && !transformable && <Rect x={-width / 2 - 5 / pixelsPerMeter} y={-depth / 2 - 5 / pixelsPerMeter}
         width={width + 10 / pixelsPerMeter} height={depth + 10 / pixelsPerMeter}
         stroke="#087c63" strokeWidth={2 / pixelsPerMeter} dash={[6 / pixelsPerMeter, 4 / pixelsPerMeter]}

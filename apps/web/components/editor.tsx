@@ -9,6 +9,7 @@ import blankFloor from '../../../fixtures/blank-floor-v1.json';
 import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
 import { readLocalLayout } from './local-layout';
+import { fixtureCenterLine, fixtureFill, fixtureOutline } from './fixture-appearance';
 
 const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
@@ -135,6 +136,8 @@ export default function Editor() {
     <div className="editor-workspace">
       <aside className="panel library">{viewMode === '2d' && <><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
         const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
+        const { width, depth } = snapshot.defaultDimensions;
+        const scale = Math.min(126 / width, 52 / depth);
         return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
           aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
           onDragStart={(event) => {
@@ -148,7 +151,14 @@ export default function Editor() {
             event.preventDefault();
             add(definition.id, screenToFloor({ x: size.width / 2, y: size.height / 2 }, state.viewport));
           }}>
-          <div className={`fixture-icon fixture-${definition.id}`} aria-hidden="true"><i /><i /><i /></div>
+          <div className="fixture-icon-slot" aria-hidden="true"><div className="fixture-icon" style={{ width: width * scale, height: depth * scale }}>
+            <svg viewBox={`0 0 ${width} ${depth}`} width="100%" height="100%">
+              <rect x="0" y="0" width={width} height={depth} fill={fixtureFill(definition.id)}
+                stroke={fixtureOutline} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+              <line x1="0" y1={depth / 2} x2={width} y2={depth / 2}
+                stroke={fixtureCenterLine} strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+          </div></div>
           <strong>{snapshot.name}</strong>
           <p>{snapshot.defaultDimensions.width} × {snapshot.defaultDimensions.depth} × {snapshot.defaultDimensions.height} m</p>
         </div>;

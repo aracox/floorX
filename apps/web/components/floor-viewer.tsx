@@ -8,6 +8,7 @@ import { useStore } from 'zustand';
 import type { FloorDocument } from '@floorx/floor-model';
 import type { EditorStore } from '@floorx/state';
 import { fixtureBox, floorBounds, wallBoxes } from './viewer-geometry';
+import { fixtureFill } from './fixture-appearance';
 
 type Polygon = FloorDocument['boundary'];
 
@@ -59,10 +60,6 @@ function Scene({ store }: { store: EditorStore }) {
   const document = state.document;
   const bounds = floorBounds(document);
   const wallParts = useMemo(() => wallBoxes(document), [document]);
-  const colors: Record<string, string> = {
-    gondola: '#80b5a4', 'wall-shelf': '#82a9c4', rack: '#bdad85',
-    freezer: '#83b9d2', checkout: '#a7a2cf', 'promotion-island': '#d7aa73',
-  };
   return <>
     <color attach="background" args={['#e8f0eb']} />
     <ambientLight intensity={1.4} />
@@ -88,7 +85,7 @@ function Scene({ store }: { store: EditorStore }) {
           store.getState().select(fixture.id, pointer.shiftKey || pointer.metaKey || pointer.ctrlKey);
         }}>
         <boxGeometry args={box.size} />
-        <meshStandardMaterial color={selected ? '#e6ad53' : colors[fixture.definition.id] ?? '#80b5a4'}
+        <meshStandardMaterial color={selected ? '#e6ad53' : fixtureFill(fixture.definition.id)}
           roughness={0.8} emissive={selected ? '#573511' : '#000000'} emissiveIntensity={selected ? 0.16 : 0} />
       </mesh>;
     })}

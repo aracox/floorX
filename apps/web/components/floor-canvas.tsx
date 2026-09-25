@@ -8,6 +8,7 @@ import { fitViewport, screenToFloor, zoomAt, type EditorStore } from '@floorx/st
 import { type Point } from '@floorx/floor-model';
 import { fixtureCatalog } from '@floorx/component-library';
 import FixtureShape from './fixture-shape';
+import { fixtureFill } from './fixture-appearance';
 
 const path = (rings: Point[][]) => rings.map((ring) => `M ${ring.map((p) => `${p.x},${p.z}`).join(' L ')} Z`).join(' ');
 export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onError }: {
@@ -123,13 +124,9 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onEr
         {state.document.fixtures.map((fixture, index) => {
           const position = state.move?.positions[fixture.id] ?? fixture.position;
           const selected = state.selectedIds.includes(fixture.id);
-          const fill = {
-            gondola: '#80b5a4', 'wall-shelf': '#82a9c4', rack: '#bdad85',
-            freezer: '#83b9d2', checkout: '#a7a2cf', 'promotion-island': '#d7aa73',
-          }[fixture.definition.id] ?? '#80b5a4';
           return <FixtureShape key={fixture.id} fixture={fixture} position={position} selected={selected}
             transformable={selected && state.selectedIds.length === 1}
-            editable={tool === 'select'} pixelsPerMeter={view.scale} fill={fill}
+            editable={tool === 'select'} pixelsPerMeter={view.scale} fill={fixtureFill(fixture.definition.id)}
             onSelect={(additive) => {
               const current = store.getState();
               if (!additive && current.selectedIds.length > 1 && current.selectedIds.includes(fixture.id)) return;
