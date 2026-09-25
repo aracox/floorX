@@ -1,6 +1,6 @@
 # floorX
 
-A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model, a versioned fixture catalog and an interactive 2D floor editor with multi-selection and clipboard editing. API persistence and the broader planner toolset are later milestones.
+A sales-floor digital twin built around one versioned floor document. The current implementation includes a framework-independent TypeScript model, a versioned fixture catalog, an interactive 2D floor editor and a read-only 3D viewer. API persistence and the broader planner toolset are later milestones.
 
 ## Development
 
@@ -21,16 +21,16 @@ npm exec --yes --package=pnpm@10.32.1 -- pnpm test
 
 ## Try the editor
 
-Open http://127.0.0.1:3000 after starting `pnpm dev`. Drag a fixture card from the palette onto the floor, select and move it, use its handles to resize or rotate it, then edit its numeric properties if needed. Shift-click fixtures to select a group and drag it together. Right-click a fixture to delete that object; Undo restores it. Copy, Paste and Duplicate are in the toolbar; Cmd/Ctrl+A, C, V and D provide shortcuts while the editor is focused. Keyboard users can focus a fixture card and press Enter or Space to place it at the view center. Use Undo/Redo for document edits and Cmd/Ctrl-drag to pan or Cmd/Ctrl-scroll to zoom. Save JSON downloads the layout as a file; Open JSON loads a saved file. Each save creates a new download, so keep the latest copy. Recover browser save can open layouts stored by the old Save locally action.
+Open http://127.0.0.1:3000 after starting `pnpm dev`. Drag a fixture card from the palette onto the floor, select and move it, use its handles to resize or rotate it, then edit its numeric properties if needed. Shift-click fixtures to select a group and drag it together. Right-click a fixture to delete that object; Undo restores it. Copy, Paste and Duplicate are in the toolbar; Cmd/Ctrl+A, C, V and D provide shortcuts while the editor is focused. Keyboard users can focus a fixture card and press Enter or Space to place it at the view center. Use Undo/Redo for document edits and Cmd/Ctrl-drag to pan or Cmd/Ctrl-scroll to zoom. Switch to 3D to inspect the same floor: drag to orbit, right-drag to pan, scroll to zoom, and click a fixture to select it. Geometry changes are made in 2D or the Properties panel. Save JSON downloads the layout as a file; Open JSON loads a saved file. Each save creates a new download, so keep the latest copy. Recover browser save can open layouts stored by the old Save locally action.
 
-See `docs/editor-milestone.md` for the first editor slice, `docs/component-editor-increment.md` for the catalog and transform handles, and `docs/multi-selection-increment.md` for group editing. The internal copy buffer is local to one editor tab and does not use the operating-system clipboard.
+See `docs/editor-milestone.md` for the first editor slice, `docs/component-editor-increment.md` for the catalog and transform handles, `docs/multi-selection-increment.md` for group editing, and `docs/viewer-increment.md` for the initial 3D view. The internal copy buffer is local to one editor tab and does not use the operating-system clipboard.
 
 ## Current implementation
 
 - `packages/floor-model`: Zod schemas, inferred TypeScript types, strict document parsing, JSON serialization and pure coordinate helpers.
 - `packages/component-library`: stable fixture definitions and default dimensions/properties.
 - `packages/state`: validated commands, transaction history, selection/drag state and pure viewport mapping.
-- `apps/web`: Next.js editor, React Konva canvas, JSON file save/open and model inspector.
+- `apps/web`: Next.js editor, React Konva canvas, React Three Fiber viewer, JSON file save/open and model inspector.
 - `fixtures/floor-v1.json`: sample floor with a versioned gondola, wall, entrance and boundary hole.
 - `docs/model-contract.md`: coordinates, anchors, topology, identity, versioning and validation policies.
 - `packages/floor-model/test`: model, geometry and round-trip acceptance cases.

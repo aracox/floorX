@@ -1,6 +1,6 @@
 # floorX preparation and implementation readiness
 
-Status: implementation authorized by the user on 2026-09-25. Milestones A and B are implemented, with milestone C increments in `component-editor-increment.md` and `multi-selection-increment.md`; see `editor-milestone.md` for the first editor slice and `model-contract.md` for adopted conventions. The proposal and historical preparation notes below remain context; they do not describe the current tooling inventory.
+Status: implementation authorized by the user on 2026-09-25. Milestones A and B are implemented, with milestone C increments in `component-editor-increment.md` and `multi-selection-increment.md` and an initial primitive 3D viewer in `viewer-increment.md`; see `editor-milestone.md` for the first editor slice and `model-contract.md` for adopted conventions. The proposal and historical preparation notes below remain context; they do not describe the current tooling inventory.
 
 ## Source and assessment
 

@@ -13,12 +13,16 @@ import { readLocalLayout } from './local-layout';
 const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
 });
+const Viewer = dynamic(() => import('./floor-viewer'), {
+  ssr: false, loading: () => <div className="canvas-loading">Loading 3D viewer…</div>,
+});
 const initial = parseFloorDocument(sample);
 
 export default function Editor() {
   const [store] = useState(() => createEditorStore(initial));
   const state = useStore(store);
   const [tool, setTool] = useState<'select' | 'pan'>('select');
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
   const [fileName, setFileName] = useState<string | null>(null);
   const [message, setMessage] = useState('Ready. Add a fixture or select one to get started.');
   const [error, setError] = useState(false);
@@ -115,7 +119,7 @@ export default function Editor() {
   return <main className="editor" onKeyDown={keyboard}>
     <header><a className="brand" href="/">floor<span>X</span></a><span className="badge">FLOOR PLANNER</span>{fileName && <span className="layout-filename" title={fileName}>{fileName}</span>}<span className="units">Meters · JSON files</span><span className={`save-state ${dirty ? 'unsaved' : ''}`}>{dirty ? 'Unsaved changes' : 'No unsaved changes'}</span></header>
     <div className="editor-toolbar" aria-label="Editor toolbar">
-      <div className="button-group"><button className={tool === 'select' ? '' : 'secondary'} aria-pressed={tool === 'select'} onClick={() => setTool('select')}>Select / move</button><button className={tool === 'pan' ? '' : 'secondary'} aria-pressed={tool === 'pan'} onClick={() => setTool('pan')}>Pan</button></div>
+      <div className="button-group"><button className={tool === 'select' ? '' : 'secondary'} aria-pressed={tool === 'select'} disabled={viewMode === '3d'} onClick={() => setTool('select')}>Select / move</button><button className={tool === 'pan' ? '' : 'secondary'} aria-pressed={tool === 'pan'} disabled={viewMode === '3d'} onClick={() => setTool('pan')}>Pan</button></div>
       <div className="button-group"><button className="secondary" disabled={!state.past.length || !!state.move} onClick={state.undo}>Undo</button><button className="secondary" disabled={!state.future.length || !!state.move} onClick={state.redo}>Redo</button></div>
       <div className="button-group"><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={copy}>Copy</button><button className="secondary" disabled={!state.clipboard || !!state.move} onClick={paste}>Paste</button><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={duplicate}>Duplicate</button><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={remove}>Delete</button></div>
       <div className="button-group save-actions"><button disabled={!!state.move} onClick={save}>Save JSON</button><label className="import-button">Open JSON<input aria-label="Open layout JSON" type="file" accept=".json,application/json" disabled={!!state.move} onChange={async (event) => {
@@ -129,7 +133,7 @@ export default function Editor() {
       }} /></label><button className="secondary" disabled={!!state.move} onClick={recoverBrowserSave}>Recover browser save</button></div>
     </div>
     <div className="editor-workspace">
-      <aside className="panel library"><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
+      <aside className="panel library">{viewMode === '2d' && <><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
         const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
         return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
           aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
@@ -148,16 +152,18 @@ export default function Editor() {
           <strong>{snapshot.name}</strong>
           <p>{snapshot.defaultDimensions.width} × {snapshot.defaultDimensions.depth} × {snapshot.defaultDimensions.height} m</p>
         </div>;
-      })}</div><div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div>
+      })}</div></>}<div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div>
       <ul className="fixture-list">{state.document.fixtures.map((fixture, index) => {
         const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
         return <li key={fixture.id}><button className={state.selectedIds.includes(fixture.id) ? 'selected' : 'secondary'} aria-pressed={state.selectedIds.includes(fixture.id)}
           onClick={(event) => { state.select(fixture.id, event.shiftKey || event.metaKey || event.ctrlKey); setTool('select'); }}><span>{name} {index + 1}</span>
           <small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>;
       })}</ul></aside>
-      <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">2D PLAN</span><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></div>
-        <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onDelete={remove} onError={(message) => report(message, true)} />
-        <div className="canvas-footer"><span>⌘/Ctrl + drag to pan · ⌘/Ctrl + scroll to zoom · Pan tool: drag freely</span><span>Shift-click to multi-select · ⌘/Ctrl C/V/D · Esc cancels · ⌘/Ctrl Z undoes</span></div>
+      <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">{viewMode === '2d' ? '2D PLAN' : '3D VIEW'}</span>
+        {viewMode === '2d' && <><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></>}
+        <div className="button-group view-switch" aria-label="Floor view"><button className={viewMode === '2d' ? '' : 'secondary'} aria-pressed={viewMode === '2d'} disabled={!!state.move} onClick={() => setViewMode('2d')}>2D</button><button className={viewMode === '3d' ? '' : 'secondary'} aria-pressed={viewMode === '3d'} disabled={!!state.move} onClick={() => setViewMode('3d')}>3D</button></div></div>
+        {viewMode === '2d' ? <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onDelete={remove} onError={(message) => report(message, true)} /> : <Viewer store={store} />}
+        <div className="canvas-footer">{viewMode === '2d' ? <><span>⌘/Ctrl + drag to pan · ⌘/Ctrl + scroll to zoom · Pan tool: drag freely</span><span>Shift-click to multi-select · ⌘/Ctrl C/V/D · Esc cancels · ⌘/Ctrl Z undoes</span></> : <><span>Drag to orbit · Right-drag to pan · Scroll to zoom</span><span>Click a fixture to select it · Edit dimensions in Properties or switch to 2D</span></>}</div>
       </section>
       <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}
         name={state.document.definitions.find((item) => item.id === selected.definition.id && item.version === selected.definition.version)?.name ?? 'Fixture'} onApply={(changes) => {

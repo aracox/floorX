@@ -8,20 +8,23 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@floorx/component-library": "workspace:*",
     "@floorx/floor-model": "workspace:*",
+    "@floorx/state": "workspace:*",
+    "@react-three/fiber": "9.8.0",
+    "konva": "10.7.0",
     "next": "16.3.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@floorx/state": "workspace:*",
     "react-konva": "19.3.0",
-    "konva": "10.7.0",
-    "zustand": "5.0.15",
-    "@floorx/component-library": "workspace:*"
+    "three": "0.186.1",
+    "zustand": "5.0.15"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "0.186.0",
     "typescript": "5.9.3"
   }
 }
