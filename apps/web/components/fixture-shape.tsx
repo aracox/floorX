@@ -7,7 +7,7 @@ import type { Fixture, Point } from '@floorx/floor-model';
 import { changesFromNodeTransform, hasMeaningfulTransform } from './fixture-transform';
 
 export default function FixtureShape({ fixture, position, selected, transformable, editable, pixelsPerMeter, fill, onSelect, onSelectClick,
-  onMoveStart, onMovePreview, onMoveEnd, onTransformStart, onTransformEnd, onTransformFinish, onError }: {
+  onContextMenu, onMoveStart, onMovePreview, onMoveEnd, onTransformStart, onTransformEnd, onTransformFinish, onError }: {
   fixture: Fixture;
   position: Point;
   selected: boolean;
@@ -17,6 +17,7 @@ export default function FixtureShape({ fixture, position, selected, transformabl
   fill: string;
   onSelect: (additive: boolean) => void;
   onSelectClick: () => void;
+  onContextMenu: (event: MouseEvent) => void;
   onMoveStart: (node: Konva.Node) => void;
   onMovePreview: (position: Point) => void;
   onMoveEnd: (node: Konva.Node) => void;
@@ -45,7 +46,11 @@ export default function FixtureShape({ fixture, position, selected, transformabl
   return <>
     <Group ref={shape} x={position.x} y={position.z} rotation={fixture.rotation * 180 / Math.PI}
       draggable={editable} _useStrictMode
-      onMouseDown={(event) => { if (editable) { event.cancelBubble = true; onSelect(event.evt.shiftKey || event.evt.metaKey || event.evt.ctrlKey); } }}
+      onMouseDown={(event) => {
+        if (event.evt.button !== 0) { event.cancelBubble = true; return; }
+        if (editable) { event.cancelBubble = true; onSelect(event.evt.shiftKey || event.evt.metaKey || event.evt.ctrlKey); }
+      }}
+      onContextMenu={(event) => { event.evt.preventDefault(); event.cancelBubble = true; onContextMenu(event.evt); }}
       onTouchStart={(event) => { if (editable) { event.cancelBubble = true; onSelect(false); } }}
       onClick={(event) => { if (editable && !event.evt.shiftKey && !event.evt.metaKey && !event.evt.ctrlKey) onSelectClick(); }}
       onTap={() => { if (editable) onSelectClick(); }}

@@ -10,9 +10,9 @@ import { fixtureCatalog } from '@floorx/component-library';
 import FixtureShape from './fixture-shape';
 
 const path = (rings: Point[][]) => rings.map((ring) => `M ${ring.map((p) => `${p.x},${p.z}`).join(' L ')} Z`).join(' ');
-export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
+export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onError }: {
   store: EditorStore; tool: 'select' | 'pan'; onAdd: (definitionId: string, point: Point) => void;
-  onSize: (size: { width: number; height: number }) => void; onError: (message: string) => void;
+  onSize: (size: { width: number; height: number }) => void; onDelete: () => void; onError: (message: string) => void;
 }) {
   const state = useStore(store);
   const container = useRef<HTMLDivElement>(null);
@@ -20,6 +20,8 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
   const fitted = useRef(false);
   const active = useRef<Konva.Node | null>(null);
   const cancelTransform = useRef<(() => void) | null>(null);
+  const menuElement = useRef<HTMLDivElement>(null);
+  const [contextMenu, setContextMenu] = useState<{ fixtureId: string; x: number; y: number } | null>(null);
   const [size, setSize] = useState({ width: 800, height: 620 });
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
@@ -33,6 +35,25 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
     observer.observe(container.current!);
     return () => observer.disconnect();
   }, [onSize, store]);
+  useEffect(() => {
+    if (!contextMenu) return;
+    menuElement.current?.querySelector('button')?.focus({ preventScroll: true });
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menuElement.current?.contains(event.target)) setContextMenu(null);
+    };
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') setContextMenu(null);
+    };
+    document.addEventListener('pointerdown', closeOnPointerDown);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnPointerDown);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [contextMenu]);
+  useEffect(() => {
+    if (contextMenu && !state.document.fixtures.some((fixture) => fixture.id === contextMenu.fixtureId)) setContextMenu(null);
+  }, [contextMenu, state.document.fixtures]);
 
   function cancelDrag() {
     cancelTransform.current?.();
@@ -115,6 +136,14 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
               current.select(fixture.id, additive);
             }}
             onSelectClick={() => state.select(fixture.id)}
+            onContextMenu={(event) => {
+              if (store.getState().move || cancelTransform.current) return;
+              const bounds = container.current!.getBoundingClientRect();
+              store.getState().select(fixture.id);
+              setContextMenu({ fixtureId: fixture.id,
+                x: Math.max(0, Math.min(event.clientX - bounds.left, bounds.width - 160)),
+                y: Math.max(0, Math.min(event.clientY - bounds.top, bounds.height - 48)) });
+            }}
             onMoveStart={(node) => { active.current = node; state.beginMove(fixture.id); }}
             onMovePreview={(point) => state.previewMove(point)}
             onMoveEnd={(node) => {
@@ -144,5 +173,16 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onError }: {
         })}
       </Layer>
     </Stage>
+    {contextMenu && <div ref={menuElement} className="fixture-context-menu" role="menu"
+      aria-label="Object actions" style={{ left: contextMenu.x, top: contextMenu.y }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') { event.stopPropagation(); setContextMenu(null); container.current?.focus({ preventScroll: true }); }
+      }}>
+      <button role="menuitem" onClick={() => {
+        store.getState().select(contextMenu.fixtureId);
+        onDelete();
+        setContextMenu(null);
+      }}>Delete object</button>
+    </div>}
   </div>;
 }

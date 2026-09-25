@@ -85,8 +85,9 @@ export default function Editor() {
     catch { report('Could not duplicate those fixtures at this position.', true); }
   }
   function remove() {
-    if (!state.selectedIds.length) return;
-    state.removeSelected(); report('Selected fixtures removed. Undo is available.');
+    const current = store.getState();
+    if (!current.selectedIds.length) return;
+    current.removeSelected(); report('Selected fixtures removed. Undo is available.');
   }
   function keyboard(event: KeyboardEvent) {
     if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -155,7 +156,7 @@ export default function Editor() {
           <small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>;
       })}</ul></aside>
       <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">2D PLAN</span><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></div>
-        <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onError={(message) => report(message, true)} />
+        <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onDelete={remove} onError={(message) => report(message, true)} />
         <div className="canvas-footer"><span>⌘/Ctrl + drag to pan · ⌘/Ctrl + scroll to zoom · Pan tool: drag freely</span><span>Shift-click to multi-select · ⌘/Ctrl C/V/D · Esc cancels · ⌘/Ctrl Z undoes</span></div>
       </section>
       <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}
