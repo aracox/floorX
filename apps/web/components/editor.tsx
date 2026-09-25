@@ -10,6 +10,7 @@ import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
 import { readLocalLayout } from './local-layout';
 import { fixtureCenterLine, fixtureFill, fixtureOutline } from './fixture-appearance';
+import { createFixtureDragImage } from './fixture-drag-image';
 
 const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
@@ -143,8 +144,8 @@ export default function Editor() {
           onDragStart={(event) => {
             event.dataTransfer.setData('application/floorx-component', definition.id);
             event.dataTransfer.effectAllowed = 'copy';
-            const icon = event.currentTarget.querySelector<HTMLElement>('.fixture-icon');
-            if (icon) event.dataTransfer.setDragImage(icon, icon.offsetWidth / 2, icon.offsetHeight / 2);
+            const image = createFixtureDragImage(snapshot.defaultDimensions, store.getState().viewport.scale, definition.id);
+            if (image) event.dataTransfer.setDragImage(image.canvas, image.offsetX, image.offsetY);
           }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
