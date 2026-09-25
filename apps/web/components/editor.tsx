@@ -8,7 +8,7 @@ import { deserializeFloorDocument, parseFloorDocument, serializeFloorDocument, t
 import sample from '../../../fixtures/floor-v1.json';
 import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
-import { readLocalLayout, saveLocalLayout } from './local-layout';
+import { readLocalLayout } from './local-layout';
 
 const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
@@ -43,22 +43,31 @@ export default function Editor() {
     state.setViewport(fitViewport(state.document.boundary.outer, size));
   }
   function save() {
-    try { saveLocalLayout(window.localStorage, state.document); state.markSaved(); report('Layout saved in this browser.'); }
-    catch { report('Could not save. Browser storage may be unavailable or full. Your edits are still here.', true); }
-  }
-  function load() {
     try {
-      const document = readLocalLayout(window.localStorage);
-      if (!document) { report('No saved layout in this browser yet. Choose Save locally first.'); return; }
-      state.load(document); setFileName(null); report('Saved layout loaded. Undo restores your previous layout.');
-    } catch { report('Could not load a valid saved layout. Your current layout has been preserved.', true); }
+      const name = fileName ?? 'floorx-layout.json';
+      const url = URL.createObjectURL(new Blob([serializeFloorDocument(state.document)], { type: 'application/json' }));
+      try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        try { link.click(); } finally { link.remove(); }
+        setFileName(name);
+        state.markSaved();
+        report(`${name} download started.`);
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    } catch { report('Could not create the JSON file. Your edits are still here.', true); }
   }
-  function exportDocument() {
-    const url = URL.createObjectURL(new Blob([serializeFloorDocument(state.document)], { type: 'application/json' }));
-    const link = document.createElement('a'); link.href = url; link.download = 'floorx-layout.json'; link.click();
-    setFileName(link.download);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    report('Layout exported as JSON.');
+  function recoverBrowserSave() {
+    try {
+      const saved = readLocalLayout(window.localStorage);
+      if (!saved) { report('No earlier browser save found.'); return; }
+      state.load(saved);
+      setFileName(null);
+      report('Earlier browser save loaded. Use Save JSON to keep it as a file.');
+    } catch { report('Could not load the earlier browser save. Current layout preserved.', true); }
   }
   const newIds = (count: number) => Array.from({ length: count }, () => `fixture-${crypto.randomUUID()}`);
   function copy() {
@@ -103,23 +112,20 @@ export default function Editor() {
   }
 
   return <main className="editor" onKeyDown={keyboard}>
-    <header><a className="brand" href="/">floor<span>X</span></a><span className="badge">FLOOR PLANNER</span>{fileName && <span className="layout-filename" title={fileName}>{fileName}</span>}<span className="units">Meters · Local workspace</span><span className={`save-state ${dirty ? 'unsaved' : ''}`}>{dirty ? 'Unsaved changes' : 'No unsaved changes'}</span></header>
+    <header><a className="brand" href="/">floor<span>X</span></a><span className="badge">FLOOR PLANNER</span>{fileName && <span className="layout-filename" title={fileName}>{fileName}</span>}<span className="units">Meters · JSON files</span><span className={`save-state ${dirty ? 'unsaved' : ''}`}>{dirty ? 'Unsaved changes' : 'No unsaved changes'}</span></header>
     <div className="editor-toolbar" aria-label="Editor toolbar">
       <div className="button-group"><button className={tool === 'select' ? '' : 'secondary'} aria-pressed={tool === 'select'} onClick={() => setTool('select')}>Select / move</button><button className={tool === 'pan' ? '' : 'secondary'} aria-pressed={tool === 'pan'} onClick={() => setTool('pan')}>Pan</button></div>
       <div className="button-group"><button className="secondary" disabled={!state.past.length || !!state.move} onClick={state.undo}>Undo</button><button className="secondary" disabled={!state.future.length || !!state.move} onClick={state.redo}>Redo</button></div>
       <div className="button-group"><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={copy}>Copy</button><button className="secondary" disabled={!state.clipboard || !!state.move} onClick={paste}>Paste</button><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={duplicate}>Duplicate</button><button className="secondary" disabled={!state.selectedIds.length || !!state.move} onClick={remove}>Delete</button></div>
-      <div className="button-group save-actions"><button disabled={!!state.move} onClick={save}>Save locally</button><button className="secondary" disabled={!!state.move} onClick={load}>Load saved</button><button className="secondary" disabled={!!state.move} onClick={exportDocument}>Export JSON</button><label className="import-button">Import JSON<input aria-label="Import layout JSON" type="file" accept=".json,application/json" disabled={!!state.move} onChange={async (event) => {
+      <div className="button-group save-actions"><button disabled={!!state.move} onClick={save}>Save JSON</button><label className="import-button">Open JSON<input aria-label="Open layout JSON" type="file" accept=".json,application/json" disabled={!!state.move} onChange={async (event) => {
         const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
         try {
           const imported = deserializeFloorDocument(await file.text());
-          const savedJson = store.getState().savedJson;
           store.getState().load(imported);
-          // Import is not a local save. Preserve the saved baseline until explicitly saved.
-          store.setState({ savedJson });
           setFileName(file.name);
-          report('Layout imported. Save locally to keep it in this browser.');
-        } catch { report('Import failed: the file is not a valid floorX document. Current layout preserved.', true); }
-      }} /></label></div>
+          report('Layout opened. Changes can be saved as a JSON file.');
+        } catch { report('Open failed: the file is not a valid floorX document. Current layout preserved.', true); }
+      }} /></label><button className="secondary" disabled={!!state.move} onClick={recoverBrowserSave}>Recover browser save</button></div>
     </div>
     <div className="editor-workspace">
       <aside className="panel library"><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
@@ -155,7 +161,7 @@ export default function Editor() {
       <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}
         name={state.document.definitions.find((item) => item.id === selected.definition.id && item.version === selected.definition.version)?.name ?? 'Fixture'} onApply={(changes) => {
         state.updateFixture(selected.id, changes); report('Fixture properties updated.');
-      }} onDelete={remove} /> : state.selectedIds.length > 1 ? <div className="empty-selection"><div aria-hidden="true">▣</div><h3>{state.selectedIds.length} fixtures selected</h3><p>Drag a selected fixture to move the group. Copy, duplicate or delete the selection with the toolbar.</p></div> : <div className="empty-selection"><div aria-hidden="true">↖</div><h3>Select a fixture</h3><p>Click a fixture on the floor or choose one from the list to edit its properties.</p></div>}<div className="local-note"><strong>Saved on this browser</strong><p>Use Save locally before closing. Load saved restores it after a reload. Export JSON to keep a portable copy.</p></div></aside>
+      }} onDelete={remove} /> : state.selectedIds.length > 1 ? <div className="empty-selection"><div aria-hidden="true">▣</div><h3>{state.selectedIds.length} fixtures selected</h3><p>Drag a selected fixture to move the group. Copy, duplicate or delete the selection with the toolbar.</p></div> : <div className="empty-selection"><div aria-hidden="true">↖</div><h3>Select a fixture</h3><p>Click a fixture on the floor or choose one from the list to edit its properties.</p></div>}<div className="local-note"><strong>Save a JSON file</strong><p>Save JSON downloads your layout. Open JSON to continue editing a saved file. Each save creates a new download. Recover browser save loads layouts saved before this change.</p></div></aside>
     </div>
     <p role="status" className={`editor-status ${error ? 'error' : ''}`}>{message}</p>
   </main>;
