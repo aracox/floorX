@@ -37,6 +37,10 @@ See `docs/editor-milestone.md` for the first editor slice, `docs/component-edito
 
 Workspace packages export TypeScript source for the web bundler. `pnpm --filter @floorx/web build` creates a production web build; there is no API server yet.
 
+## Deployment
+
+The `floorx` Vercel project is connected to `aracox/floorX` with `main` as its production branch. Set the framework to Next.js and the root directory to `apps/web`, with access to source files outside the root directory enabled so the app can import the shared `packages/` workspace. Vercel uses the repository's pinned pnpm version and lockfile. The current editor runs entirely in the browser, so it needs no deployment environment variables or backend service. Pushes to `main` deploy to production through the Git integration.
+
 The full product brief is in `plan.md`, and delivery sequencing is in `docs/preparation.md`.
 
 Toolchain selection was checked against the npm registry engine requirements and the official [pnpm installation guide](https://pnpm.io/installation), [Vitest documentation](https://vitest.dev/guide/), and [Zod documentation](https://zod.dev/). Next.js 16.3.6 and React/ReactDOM 19.3.0 were checked against registry peer and engine requirements for the preview. React Konva 19.3.0, Konva 10.7.0 and Zustand 5.0.15 were verified against these versions for milestone B.
