@@ -5,7 +5,7 @@ import { useState, type KeyboardEvent } from 'react';
 import { useStore } from 'zustand';
 import { createEditorStore, fitViewport, screenToFloor, zoomAt } from '@floorx/state';
 import { deserializeFloorDocument, parseFloorDocument, serializeFloorDocument, type Point } from '@floorx/floor-model';
-import sample from '../../../fixtures/floor-v1.json';
+import blankFloor from '../../../fixtures/blank-floor-v1.json';
 import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
 import { readLocalLayout } from './local-layout';
@@ -16,7 +16,7 @@ const Canvas = dynamic(() => import('./floor-canvas'), {
 const Viewer = dynamic(() => import('./floor-viewer'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading 3D viewer…</div>,
 });
-const initial = parseFloorDocument(sample);
+const initial = parseFloorDocument(blankFloor);
 
 export default function Editor() {
   const [store] = useState(() => createEditorStore(initial));

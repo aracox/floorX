@@ -8,7 +8,7 @@ The `/` route provides a React Konva editor backed by `@floorx/state` (Zustand).
 - Select a fixture on the canvas or in the keyboard-accessible list. Drag to move it. Change X/Z, width/depth/height or rotation in the properties form, then choose Apply properties. Position and dimensions are meters; displayed rotation is clockwise degrees, persisted as normalized radians.
 - Pan tool drags the viewport. Wheel zoom stays anchored to the pointer; toolbar zoom stays anchored to the viewport center. Fit floor frames the boundary. Pan and zoom never change saved geometry or history.
 - Undo/redo buttons and Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z or Ctrl+Y restore document edits. Delete/Backspace removes a selected fixture. Shortcuts operate within the editor and ignore inputs, textareas, selects and editable text. Escape cancels an active fixture drag and clears selection. Escape can also cancel a canvas pan.
-- Save locally writes one layout slot to this browser's localStorage. Load saved validates and restores that slot after a reload; loading is undoable. The app initially opens the sample, so choose Load saved to resume. JSON export/import provides a portable document. A failed save, invalid file or corrupt stored document retains the current layout.
+- At this original milestone, Save locally wrote one browser storage slot and the app initially opened the sample. The current editor opens `fixtures/blank-floor-v1.json`, saves JSON downloads, and can still recover earlier browser saves. Loading is undoable; a failed save, invalid file or corrupt stored document retains the current layout.
 
 ## State and geometry
 

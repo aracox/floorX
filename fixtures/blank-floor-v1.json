@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "storeId": "store-local",
+  "floorId": "floor-untitled",
+  "layoutId": "layout-untitled",
+  "scenarioId": "current",
+  "name": "Untitled floor",
+  "baseElevation": 0,
+  "boundary": {
+    "outer": [{ "x": 0, "z": 0 }, { "x": 20, "z": 0 }, { "x": 20, "z": 15 }, { "x": 0, "z": 15 }],
+    "holes": []
+  },
+  "definitions": [],
+  "fixtures": [],
+  "walls": [],
+  "openings": [],
+  "zones": []
+}
