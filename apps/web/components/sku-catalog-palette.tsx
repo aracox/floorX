@@ -58,17 +58,20 @@ export default function SkuCatalogPalette({
     ? Number(selectedFixture.properties.rows)
     : (isShelving ? 2 : 0);
 
-  const stockedFacingsBySku = useMemo(() => {
+  const [selectedTier, setSelectedTier] = useState<number>(0);
+
+  const activeTier = isShelving && rows > 0 ? Math.min(selectedTier, rows - 1) : 0;
+
+  const stockedFacingsOnActiveTier = useMemo(() => {
     if (!selectedFixture || !isShelving) return {};
     const planogram = getFixturePlanogram(selectedFixture);
+    const tier = planogram.find((t) => t.tierIndex === activeTier);
     const counts: Record<string, number> = {};
-    for (const tier of planogram) {
-      for (const item of tier.items || []) {
-        counts[item.skuId] = (counts[item.skuId] || 0) + item.facings;
-      }
+    for (const item of tier?.items || []) {
+      counts[item.skuId] = (counts[item.skuId] || 0) + item.facings;
     }
     return counts;
-  }, [selectedFixture, isShelving]);
+  }, [selectedFixture, isShelving, activeTier]);
 
   const handleStockSku = (sku: ProductSku) => {
     if (!selectedFixture || !isShelving) {
@@ -76,12 +79,7 @@ export default function SkuCatalogPalette({
       return;
     }
 
-    const tierCount = rows || 2;
-    const targetTier = Math.min(
-      tierCount - 1,
-      Math.max(0, sku.recommendedTier ?? (tierCount > 2 ? 1 : 0))
-    );
-
+    const targetTier = activeTier;
     const planogram = getFixturePlanogram(selectedFixture);
     const existingTier = planogram.find((t) => t.tierIndex === targetTier);
 
@@ -124,7 +122,7 @@ export default function SkuCatalogPalette({
       planogram: nextPlanogram as any,
     });
 
-    onReport(`Added facing of ${sku.name} on Tier ${targetTier + 1}.`);
+    onReport(`Added facing of ${sku.name} to Tier ${targetTier + 1}.`);
   };
 
   const handleUnstockSku = (sku: ProductSku) => {
@@ -132,9 +130,10 @@ export default function SkuCatalogPalette({
     const planogram = getFixturePlanogram(selectedFixture);
 
     let removed = false;
-    const nextPlanogram = planogram
+    // First try removing from the currently selected active tier
+    let nextPlanogram = planogram
       .map((t) => {
-        if (removed) return t;
+        if (t.tierIndex !== activeTier) return t;
         const itemIdx = t.items.findIndex((it) => it.skuId === sku.id);
         if (itemIdx >= 0) {
           removed = true;
@@ -151,6 +150,28 @@ export default function SkuCatalogPalette({
       })
       .filter((t) => t.items.length > 0);
 
+    // If not on active tier, remove from any tier that has it
+    if (!removed) {
+      nextPlanogram = planogram
+        .map((t) => {
+          if (removed) return t;
+          const itemIdx = t.items.findIndex((it) => it.skuId === sku.id);
+          if (itemIdx >= 0) {
+            removed = true;
+            const currentItem = t.items[itemIdx];
+            if (currentItem.facings > 1) {
+              const nextItems = [...t.items];
+              nextItems[itemIdx] = { ...currentItem, facings: currentItem.facings - 1 };
+              return { ...t, items: nextItems };
+            } else {
+              return { ...t, items: t.items.filter((_, idx) => idx !== itemIdx) };
+            }
+          }
+          return t;
+        })
+        .filter((t) => t.items.length > 0);
+    }
+
     if (removed) {
       onUpdateFixtureProperties(selectedFixture.id, {
         ...selectedFixture.properties,
@@ -162,6 +183,34 @@ export default function SkuCatalogPalette({
 
   return (
     <div className="sku-catalog-section">
+      {isShelving && rows > 0 && (
+        <div className="sku-tier-selector">
+          <div className="sku-tier-label-row">
+            <span className="sku-tier-label">Target Row (Tier):</span>
+            <span className="sku-tier-hint">Row {activeTier + 1} of {rows}</span>
+          </div>
+          <div className="sku-tier-buttons">
+            {Array.from({ length: rows }, (_, i) => {
+              const tierNum = i + 1;
+              const isTop = i === rows - 1;
+              const isBottom = i === 0;
+              const tag = isBottom ? 'Bottom' : isTop ? 'Top' : 'Mid';
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`tier-select-btn ${activeTier === i ? 'active' : ''}`}
+                  onClick={() => setSelectedTier(i)}
+                  title={`Select Row ${tierNum} (${tag}) to stock SKUs`}
+                >
+                  Tier {tierNum} <small>({tag})</small>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="sku-search-box">
         <input
           type="search"
@@ -190,7 +239,7 @@ export default function SkuCatalogPalette({
           const widthCm = Math.round(sku.dimensions.width * 100);
           const depthCm = Math.round(sku.dimensions.depth * 100);
           const heightCm = Math.round(sku.dimensions.height * 100);
-          const stockedCount = stockedFacingsBySku[sku.id] || 0;
+          const stockedCount = stockedFacingsOnActiveTier[sku.id] || 0;
 
           return (
             <div

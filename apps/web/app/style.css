@@ -755,6 +755,76 @@ a:focus-visible,
     gap: 8px;
 }
 
+.sku-tier-selector {
+    background: #edf5f0;
+    border: 1px solid #c8ddce;
+    border-radius: 7px;
+    padding: 7px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sku-tier-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sku-tier-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #1e3f32;
+}
+
+.sku-tier-hint {
+    font-size: 9.5px;
+    color: #166534;
+    font-weight: 700;
+    background: #dcfce7;
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.sku-tier-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.tier-select-btn {
+    flex: 1;
+    min-width: 55px;
+    padding: 4px 6px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 5px;
+    border: 1px solid #b8dac5;
+    background: white;
+    color: #2d4f40;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+}
+
+.tier-select-btn small {
+    font-size: 8.5px;
+    opacity: 0.8;
+}
+
+.tier-select-btn:hover {
+    background: #e2efe6;
+    border-color: #236d59;
+}
+
+.tier-select-btn.active {
+    background: #236d59;
+    color: white;
+    border-color: #236d59;
+    box-shadow: 0 1px 3px rgba(35, 109, 89, 0.25);
+}
+
+
 .sku-search-box input {
     width: 100%;
     padding: 6px 10px;
