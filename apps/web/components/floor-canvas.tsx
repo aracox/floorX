@@ -5,15 +5,16 @@ import { useStore } from 'zustand';
 import Konva from 'konva';
 import { Stage, Layer, Line, Path, Text } from 'react-konva';
 import { fitViewport, screenToFloor, zoomAt, type EditorStore } from '@floorx/state';
-import { type Point } from '@floorx/floor-model';
+import { normalizeRotation, type Point } from '@floorx/floor-model';
 import { fixtureCatalog } from '@floorx/component-library';
 import FixtureShape from './fixture-shape';
 import { fixtureFill } from './fixture-appearance';
 
 const path = (rings: Point[][]) => rings.map((ring) => `M ${ring.map((p) => `${p.x},${p.z}`).join(' L ')} Z`).join(' ');
-export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onError }: {
+export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onError, showLabels = false }: {
   store: EditorStore; tool: 'select' | 'pan'; onAdd: (definitionId: string, point: Point) => void;
   onSize: (size: { width: number; height: number }) => void; onDelete: () => void; onError: (message: string) => void;
+  showLabels?: boolean;
 }) {
   const state = useStore(store);
   const container = useRef<HTMLDivElement>(null);
@@ -138,8 +139,8 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onEr
               const bounds = container.current!.getBoundingClientRect();
               store.getState().select(fixture.id);
               setContextMenu({ fixtureId: fixture.id,
-                x: Math.max(0, Math.min(event.clientX - bounds.left, bounds.width - 160)),
-                y: Math.max(0, Math.min(event.clientY - bounds.top, bounds.height - 48)) });
+                x: Math.max(0, Math.min(event.clientX - bounds.left, bounds.width - 260)),
+                y: Math.max(0, Math.min(event.clientY - bounds.top, bounds.height - 300)) });
             }}
             onMoveStart={(node) => { active.current = node; state.beginMove(fixture.id); }}
             onMovePreview={(point) => state.previewMove(point)}
@@ -161,7 +162,7 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onEr
             onTransformFinish={() => { cancelTransform.current = null; }}
             onError={onError} />;
         })}
-        {state.document.fixtures.map((fixture, index) => {
+        {showLabels && state.document.fixtures.map((fixture, index) => {
           const position = state.move?.positions[fixture.id] ?? fixture.position;
           const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
           return <Text key={`label-${fixture.id}`} text={`${name} ${index + 1}`}
@@ -170,16 +171,74 @@ export default function FloorCanvas({ store, tool, onAdd, onSize, onDelete, onEr
         })}
       </Layer>
     </Stage>
-    {contextMenu && <div ref={menuElement} className="fixture-context-menu" role="menu"
-      aria-label="Object actions" style={{ left: contextMenu.x, top: contextMenu.y }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') { event.stopPropagation(); setContextMenu(null); container.current?.focus({ preventScroll: true }); }
-      }}>
-      <button role="menuitem" onClick={() => {
-        store.getState().select(contextMenu.fixtureId);
-        onDelete();
+    {contextMenu && (() => {
+      const fixture = store.getState().document.fixtures.find((f) => f.id === contextMenu.fixtureId);
+      const currentDeg = fixture ? ((Math.round((fixture.rotation * 180) / Math.PI) % 360) + 360) % 360 : 0;
+      const rotateByDelta = (deltaDegrees: number) => {
+        if (fixture) {
+          store.getState().updateFixture(fixture.id, {
+            rotation: normalizeRotation(fixture.rotation + (deltaDegrees * Math.PI) / 180),
+          });
+        }
         setContextMenu(null);
-      }}>Delete object</button>
-    </div>}
+        container.current?.focus({ preventScroll: true });
+      };
+      const setRotationAngle = (degrees: number) => {
+        if (fixture) {
+          store.getState().updateFixture(fixture.id, {
+            rotation: normalizeRotation((degrees * Math.PI) / 180),
+          });
+        }
+        setContextMenu(null);
+        container.current?.focus({ preventScroll: true });
+      };
+
+      return <div ref={menuElement} className="fixture-context-menu" role="menu"
+        aria-label="Object actions" style={{ left: contextMenu.x, top: contextMenu.y }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') { event.stopPropagation(); setContextMenu(null); container.current?.focus({ preventScroll: true }); }
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const buttons = Array.from(menuElement.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
+            const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+            const nextIndex = event.key === 'ArrowDown'
+              ? (index + 1) % buttons.length
+              : (index - 1 + buttons.length) % buttons.length;
+            buttons[nextIndex]?.focus();
+          }
+        }}>
+        <button role="menuitem" onClick={() => rotateByDelta(90)}>
+          <span>Rotate 90° Clockwise</span>
+          <span style={{ fontSize: '15px', color: '#0284c7' }}>↻</span>
+        </button>
+        <button role="menuitem" onClick={() => rotateByDelta(-90)}>
+          <span>Rotate 90° Counter-clockwise</span>
+          <span style={{ fontSize: '15px', color: '#64748b' }}>↺</span>
+        </button>
+        <div className="menu-divider" role="separator" />
+        <button role="menuitem" onClick={() => setRotationAngle(0)}>
+          <span>Rotate to 0° (Default)</span>
+          {currentDeg === 0 && <span style={{ color: '#0b8067', fontWeight: 700 }}>✓</span>}
+        </button>
+        <button role="menuitem" onClick={() => setRotationAngle(90)}>
+          <span>Rotate to 90°</span>
+          {currentDeg === 90 && <span style={{ color: '#0b8067', fontWeight: 700 }}>✓</span>}
+        </button>
+        <button role="menuitem" onClick={() => setRotationAngle(180)}>
+          <span>Rotate to 180°</span>
+          {currentDeg === 180 && <span style={{ color: '#0b8067', fontWeight: 700 }}>✓</span>}
+        </button>
+        <button role="menuitem" onClick={() => setRotationAngle(270)}>
+          <span>Rotate to 270°</span>
+          {currentDeg === 270 && <span style={{ color: '#0b8067', fontWeight: 700 }}>✓</span>}
+        </button>
+        <div className="menu-divider" role="separator" />
+        <button className="danger" role="menuitem" onClick={() => {
+          store.getState().select(contextMenu.fixtureId);
+          onDelete();
+          setContextMenu(null);
+        }}>Delete object</button>
+      </div>;
+    })()}
   </div>;
 }

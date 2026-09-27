@@ -9,6 +9,8 @@ import type { FloorDocument } from '@floorx/floor-model';
 import type { EditorStore } from '@floorx/state';
 import { fixtureBox, floorBounds, wallBoxes } from './viewer-geometry';
 import { fixtureFill } from './fixture-appearance';
+import { ShelfTierProducts } from './shelf-products-3d';
+import type { PlacedSkuItem } from '@floorx/component-library';
 
 type Polygon = FloorDocument['boundary'];
 
@@ -61,32 +63,136 @@ function Scene({ store }: { store: EditorStore }) {
   const bounds = floorBounds(document);
   const wallParts = useMemo(() => wallBoxes(document), [document]);
   return <>
-    <color attach="background" args={['#e8f0eb']} />
+    <color attach="background" args={['#cbd5e1']} />
     <ambientLight intensity={1.4} />
-    <directionalLight position={[bounds.centerX + 8, document.baseElevation + 20, bounds.centerZ + 12]} intensity={2.2} />
+    <hemisphereLight args={['#ffffff', '#64748b', 1.0]} />
+    <directionalLight position={[bounds.centerX + 12, document.baseElevation + 25, bounds.centerZ + 15]} intensity={1.8} />
+    <directionalLight position={[bounds.centerX - 12, document.baseElevation + 20, bounds.centerZ - 15]} intensity={1.2} />
     <CameraControls {...bounds} elevation={document.baseElevation} />
     <group onClick={() => store.getState().select(null)}>
-      <Surface polygon={document.boundary} elevation={document.baseElevation} color="#f9fbf9" />
+      <Surface polygon={document.boundary} elevation={document.baseElevation} color="#738290" />
       {document.zones.map((zone) => <Surface key={zone.id} polygon={zone.boundary}
-        elevation={document.baseElevation + 0.01} color="#cfe3ed" />)}
+        elevation={document.baseElevation + 0.01} color="#50667a" />)}
       {wallParts.map((part, index) => <mesh key={`${part.wallId}-${index}`}
         position={part.position} rotation={[0, part.rotationY, 0]}>
         <boxGeometry args={part.size} />
-        <meshStandardMaterial color="#637b73" roughness={0.9} />
+        <meshStandardMaterial color="#334155" roughness={0.7} />
       </mesh>)}
     </group>
     {document.fixtures.map((fixture) => {
       const box = fixtureBox(fixture, document.baseElevation);
       const selected = state.selectedIds.includes(fixture.id);
-      return <mesh key={fixture.id} position={box.position} rotation={[0, box.rotationY, 0]}
-        onClick={(event) => {
-          event.stopPropagation();
-          const pointer = event.nativeEvent;
-          store.getState().select(fixture.id, pointer.shiftKey || pointer.metaKey || pointer.ctrlKey);
-        }}>
+      const isShelving = ['gondola', 'wall-shelf', 'rack'].includes(fixture.definition.id) || typeof fixture.properties.rows === 'number';
+      const rows = typeof fixture.properties.rows === 'number'
+        ? Math.max(1, Math.round(Number(fixture.properties.rows)))
+        : (isShelving ? 2 : 1);
+      const [width, height, depth] = box.size;
+      const selectFixture = (event: { stopPropagation: () => void; nativeEvent: MouseEvent }) => {
+        event.stopPropagation();
+        const pointer = event.nativeEvent;
+        store.getState().select(fixture.id, pointer.shiftKey || pointer.metaKey || pointer.ctrlKey);
+      };
+      const materialColor = selected ? '#e6ad53' : fixtureFill(fixture.definition.id);
+      const emissiveColor = selected ? '#573511' : '#000000';
+      const emissiveIntensity = selected ? 0.16 : 0;
+
+      if (isShelving) {
+        const shelfThickness = Math.max(0.018, Math.min(0.035, height / (rows * 8)));
+        const postThickness = Math.max(0.02, Math.min(0.04, Math.min(width, depth) * 0.08));
+        const plinthHeight = Math.max(0.04, Math.min(0.08, height * 0.04));
+        const topCapHeight = Math.max(0.015, Math.min(0.03, height * 0.02));
+        const interiorHeight = Math.max(0.1, height - plinthHeight - topCapHeight);
+        const rowHeight = interiorHeight / rows;
+
+        const shelfColor = '#ffffff';
+        const backColor = selected ? '#fef3c7' : '#ffffff';
+        const frameColor = selected ? '#f59e0b' : '#f1f5f9';
+        const plinthColor = selected ? '#d97706' : '#cbd5e1';
+        const frameEmissive = selected ? '#b45309' : '#000000';
+        const frameEmissiveIntensity = selected ? 0.25 : 0;
+
+        return <group key={fixture.id} position={box.position} rotation={[0, box.rotationY, 0]} onClick={selectFixture}>
+          {/* Base plinth / kickplate */}
+          <mesh position={[0, -height / 2 + plinthHeight / 2, 0]}>
+            <boxGeometry args={[width, plinthHeight, depth]} />
+            <meshStandardMaterial color={plinthColor} roughness={0.8}
+              emissive={frameEmissive} emissiveIntensity={frameEmissiveIntensity} />
+          </mesh>
+          {/* Top cap / header frame */}
+          <mesh position={[0, height / 2 - topCapHeight / 2, 0]}>
+            <boxGeometry args={[width, topCapHeight, depth]} />
+            <meshStandardMaterial color={frameColor} roughness={0.6}
+              emissive={frameEmissive} emissiveIntensity={frameEmissiveIntensity} />
+          </mesh>
+          {/* Back/Center upright partition */}
+          {fixture.definition.id !== 'rack' && <mesh position={[0, 0, fixture.definition.id === 'wall-shelf' ? -depth / 2 + postThickness / 2 : 0]}>
+            <boxGeometry args={[width, height, postThickness]} />
+            <meshStandardMaterial color={backColor} roughness={0.3}
+              emissive={selected ? '#f59e0b' : '#ffffff'} emissiveIntensity={selected ? 0.2 : 0.05} />
+          </mesh>}
+          {/* Side upright posts */}
+          <mesh position={[-width / 2 + postThickness / 2, 0, 0]}>
+            <boxGeometry args={[postThickness, height, depth]} />
+            <meshStandardMaterial color={frameColor} roughness={0.6}
+              emissive={frameEmissive} emissiveIntensity={frameEmissiveIntensity} />
+          </mesh>
+          <mesh position={[width / 2 - postThickness / 2, 0, 0]}>
+            <boxGeometry args={[postThickness, height, depth]} />
+            <meshStandardMaterial color={frameColor} roughness={0.6}
+              emissive={frameEmissive} emissiveIntensity={frameEmissiveIntensity} />
+          </mesh>
+          {/* Distinct shelf tiers: exactly `rows` pure white shelf boards */}
+          {Array.from({ length: rows }, (_, r) => {
+            const shelfY = -height / 2 + plinthHeight + r * rowHeight + shelfThickness / 2;
+            const shelfBoardTop = shelfY + shelfThickness / 2;
+            const shelfWidth = Math.max(0.01, width - postThickness * 2);
+
+            let tierItems: PlacedSkuItem[] = [];
+            const planogram = fixture.properties.planogram as any;
+            if (Array.isArray(planogram)) {
+              const match = planogram.find((t: any) => t && t.tierIndex === r);
+              if (match && Array.isArray(match.items)) tierItems = match.items;
+            } else if (planogram && typeof planogram === 'object') {
+              const items = planogram[r] ?? planogram[`tier-${r}`];
+              if (Array.isArray(items)) tierItems = items;
+            }
+
+            return <group key={`shelf-${r}`}>
+              {/* Shelf board */}
+              <mesh position={[0, shelfY, 0]}>
+                <boxGeometry args={[shelfWidth, shelfThickness, depth]} />
+                <meshStandardMaterial color={shelfColor} roughness={0.2} metalness={0.0}
+                  emissive="#ffffff" emissiveIntensity={selected ? 0.25 : 0.08} />
+              </mesh>
+              {/* Shelf-edge price-tag rail */}
+              <mesh position={[0, shelfY, depth / 2 + 0.003]}>
+                <boxGeometry args={[shelfWidth, shelfThickness * 1.5, 0.006]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.3} />
+              </mesh>
+              {/* Shelf-edge accent tags */}
+              <mesh position={[0, shelfY, depth / 2 + 0.006]}>
+                <boxGeometry args={[shelfWidth * 0.9, shelfThickness * 0.9, 0.002]} />
+                <meshStandardMaterial color="#e2e8f0" roughness={0.4} />
+              </mesh>
+              {/* 3D Products on this shelf tier */}
+              <ShelfTierProducts
+                planogramItems={tierItems}
+                tierIndex={r}
+                shelfBoardTop={shelfBoardTop}
+                shelfThickness={shelfThickness}
+                fixtureWidth={width}
+                fixtureDepth={depth}
+                postThickness={postThickness}
+              />
+            </group>;
+          })}
+        </group>;
+      }
+
+      return <mesh key={fixture.id} position={box.position} rotation={[0, box.rotationY, 0]} onClick={selectFixture}>
         <boxGeometry args={box.size} />
-        <meshStandardMaterial color={selected ? '#e6ad53' : fixtureFill(fixture.definition.id)}
-          roughness={0.8} emissive={selected ? '#573511' : '#000000'} emissiveIntensity={selected ? 0.16 : 0} />
+        <meshStandardMaterial color={materialColor}
+          roughness={0.8} emissive={emissiveColor} emissiveIntensity={emissiveIntensity} />
       </mesh>;
     })}
   </>;

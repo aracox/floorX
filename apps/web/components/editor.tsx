@@ -9,8 +9,9 @@ import blankFloor from '../../../fixtures/blank-floor-v1.json';
 import { fixtureCatalog } from '@floorx/component-library';
 import Properties from './properties';
 import { readLocalLayout } from './local-layout';
-import { fixtureCenterLine, fixtureFill, fixtureOutline } from './fixture-appearance';
+import { fixtureCenterLine, fixtureFill, fixtureFrontLine, fixtureOutline } from './fixture-appearance';
 import { createFixtureDragImage } from './fixture-drag-image';
+import SkuCatalogPalette from './sku-catalog-palette';
 
 const Canvas = dynamic(() => import('./floor-canvas'), {
   ssr: false, loading: () => <div className="canvas-loading">Loading floor editor…</div>,
@@ -25,6 +26,8 @@ export default function Editor() {
   const state = useStore(store);
   const [tool, setTool] = useState<'select' | 'pan'>('select');
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const [leftTab, setLeftTab] = useState<'fixtures' | 'skus'>('fixtures');
+  const [showLabels, setShowLabels] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [message, setMessage] = useState('Ready. Add a fixture or select one to get started.');
   const [error, setError] = useState(false);
@@ -135,48 +138,94 @@ export default function Editor() {
       }} /></label><button className="secondary" disabled={!!state.move} onClick={recoverBrowserSave}>Recover browser save</button></div>
     </div>
     <div className="editor-workspace">
-      <aside className="panel library">{viewMode === '2d' && <><div className="panel-heading"><h2>Components</h2></div><div className="palette-items">{fixtureCatalog.map((definition) => {
-        const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
-        const { width, depth } = snapshot.defaultDimensions;
-        const scale = Math.min(126 / width, 52 / depth);
-        return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
-          aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
-          onDragStart={(event) => {
-            event.dataTransfer.setData('application/floorx-component', definition.id);
-            event.dataTransfer.setData('text/plain', definition.id);
-            event.dataTransfer.effectAllowed = 'copy';
-            const image = createFixtureDragImage(snapshot.defaultDimensions, store.getState().viewport.scale, definition.id);
-            if (image) {
-              event.dataTransfer.setDragImage(image.canvas, image.offsetX, image.offsetY);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            add(definition.id, screenToFloor({ x: size.width / 2, y: size.height / 2 }, state.viewport));
-          }}>
-          <div className="fixture-icon-slot" aria-hidden="true"><div className="fixture-icon" style={{ width: width * scale, height: depth * scale }}>
-            <svg viewBox={`0 0 ${width} ${depth}`} width="100%" height="100%">
-              <rect x="0" y="0" width={width} height={depth} fill={fixtureFill(definition.id)}
-                stroke={fixtureOutline} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-              <line x1="0" y1={depth / 2} x2={width} y2={depth / 2}
-                stroke={fixtureCenterLine} strokeWidth="1" vectorEffect="non-scaling-stroke" />
-            </svg>
-          </div></div>
-          <strong>{snapshot.name}</strong>
-          <p>{snapshot.defaultDimensions.width} × {snapshot.defaultDimensions.depth} × {snapshot.defaultDimensions.height} m</p>
-        </div>;
-      })}</div></>}<div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div>
-      <ul className="fixture-list">{state.document.fixtures.map((fixture, index) => {
-        const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
-        return <li key={fixture.id}><button className={state.selectedIds.includes(fixture.id) ? 'selected' : 'secondary'} aria-pressed={state.selectedIds.includes(fixture.id)}
-          onClick={(event) => { state.select(fixture.id, event.shiftKey || event.metaKey || event.ctrlKey); setTool('select'); }}><span>{name} {index + 1}</span>
-          <small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>;
-      })}</ul></aside>
+      <aside className="panel library">
+        <div className="library-tabs">
+          <button
+            type="button"
+            className={leftTab === 'fixtures' ? 'tab-btn active' : 'tab-btn'}
+            onClick={() => setLeftTab('fixtures')}
+          >
+            Fixtures
+          </button>
+          <button
+            type="button"
+            className={leftTab === 'skus' ? 'tab-btn active' : 'tab-btn'}
+            onClick={() => setLeftTab('skus')}
+          >
+            SKU
+          </button>
+        </div>
+
+        {leftTab === 'fixtures' ? (
+          <>
+            {viewMode === '2d' && (
+              <>
+                <div className="panel-heading"><h2>Components</h2></div>
+                <div className="palette-items">{fixtureCatalog.map((definition) => {
+                  const snapshot = state.document.definitions.find((item) => item.id === definition.id && item.version === definition.version) ?? definition;
+                  const { width, depth } = snapshot.defaultDimensions;
+                  const scale = Math.min(126 / width, 52 / depth);
+                  const isShelving = ['gondola', 'wall-shelf', 'rack'].includes(definition.id) || typeof snapshot.defaultProperties.rows === 'number';
+                  const paletteRows = typeof snapshot.defaultProperties.rows === 'number'
+                    ? Math.max(1, Math.round(Number(snapshot.defaultProperties.rows)))
+                    : (isShelving ? 2 : 1);
+                  return <div className="palette-card" key={definition.id} draggable role="button" tabIndex={0}
+                    aria-label={`${snapshot.name}. Drag onto the floor, or press Enter to place at the view center.`}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData('application/floorx-component', definition.id);
+                      event.dataTransfer.setData('text/plain', definition.id);
+                      event.dataTransfer.effectAllowed = 'copy';
+                      const image = createFixtureDragImage(snapshot.defaultDimensions, store.getState().viewport.scale, definition.id, paletteRows);
+                      if (image) {
+                        event.dataTransfer.setDragImage(image.canvas, image.offsetX, image.offsetY);
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      add(definition.id, screenToFloor({ x: size.width / 2, y: size.height / 2 }, state.viewport));
+                    }}>
+                    <div className="fixture-icon-slot" aria-hidden="true"><div className="fixture-icon" style={{ width: width * scale, height: depth * scale }}>
+                      <svg viewBox={`0 0 ${width} ${depth}`} width="100%" height="100%">
+                        <rect x="0" y="0" width={width} height={depth} fill={fixtureFill(definition.id)}
+                          stroke={fixtureOutline} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                        {Array.from({ length: paletteRows - 1 }, (_, i) => {
+                          const lineY = (depth * (i + 1)) / paletteRows;
+                          return <line key={i} x1="0" y1={lineY} x2={width} y2={lineY}
+                            stroke={fixtureCenterLine} strokeWidth="1" vectorEffect="non-scaling-stroke" />;
+                        })}
+                        {isShelving && <line x1="0" y1={depth} x2={width} y2={depth}
+                          stroke={fixtureFrontLine} strokeWidth="3" vectorEffect="non-scaling-stroke" />}
+                      </svg>
+                    </div></div>
+                    <strong>{snapshot.name}</strong>
+                    <p>{snapshot.defaultDimensions.width} × {snapshot.defaultDimensions.depth} × {snapshot.defaultDimensions.height} m</p>
+                  </div>;
+                })}</div>
+              </>
+            )}
+            <div className="panel-heading"><h2>Fixtures <span className="count">{state.document.fixtures.length}</span></h2></div>
+            <ul className="fixture-list">{state.document.fixtures.map((fixture, index) => {
+              const name = state.document.definitions.find((item) => item.id === fixture.definition.id && item.version === fixture.definition.version)?.name ?? 'Fixture';
+              return <li key={fixture.id}><button className={state.selectedIds.includes(fixture.id) ? 'selected' : 'secondary'} aria-pressed={state.selectedIds.includes(fixture.id)}
+                onClick={(event) => { state.select(fixture.id, event.shiftKey || event.metaKey || event.ctrlKey); setTool('select'); }}><span>{name} {index + 1}</span>
+                <small>{fixture.position.x.toFixed(2)}, {fixture.position.z.toFixed(2)} m</small></button></li>;
+            })}</ul>
+          </>
+        ) : (
+          <SkuCatalogPalette
+            selectedFixture={selected}
+            onUpdateFixtureProperties={(id, properties) => {
+              state.updateFixture(id, { properties });
+            }}
+            onReport={report}
+          />
+        )}
+      </aside>
       <section className="panel canvas-panel"><div className="canvas-toolbar"><span className="badge">{viewMode === '2d' ? '2D PLAN' : '3D VIEW'}</span>
-        {viewMode === '2d' && <><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button></>}
+        {viewMode === '2d' && <><span>{Math.round(state.viewport.scale / 32 * 100)}%</span><button className="secondary" aria-label="Zoom out" disabled={!!state.move} onClick={() => zoom(1 / 1.2)}>−</button><button className="secondary" aria-label="Zoom in" disabled={!!state.move} onClick={() => zoom(1.2)}>+</button><button className="secondary" disabled={!!state.move} onClick={fit}>Fit floor</button><button className={showLabels ? '' : 'secondary'} aria-pressed={showLabels} disabled={!!state.move} onClick={() => setShowLabels((prev) => !prev)} title="Toggle fixture names on canvas">Labels</button></>}
         <div className="button-group view-switch" aria-label="Floor view"><button className={viewMode === '2d' ? '' : 'secondary'} aria-pressed={viewMode === '2d'} disabled={!!state.move} onClick={() => setViewMode('2d')}>2D</button><button className={viewMode === '3d' ? '' : 'secondary'} aria-pressed={viewMode === '3d'} disabled={!!state.move} onClick={() => setViewMode('3d')}>3D</button></div></div>
-        {viewMode === '2d' ? <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onDelete={remove} onError={(message) => report(message, true)} /> : <Viewer store={store} />}
+        {viewMode === '2d' ? <Canvas store={store} tool={tool} onAdd={add} onSize={setSize} onDelete={remove} onError={(message) => report(message, true)} showLabels={showLabels} /> : <Viewer store={store} />}
         <div className="canvas-footer">{viewMode === '2d' ? <><span>⌘/Ctrl + drag to pan · ⌘/Ctrl + scroll to zoom · Pan tool: drag freely</span><span>Shift-click to multi-select · ⌘/Ctrl C/V/D · Esc cancels · ⌘/Ctrl Z undoes</span></> : <><span>Drag to orbit · Right-drag to pan · Scroll to zoom</span><span>Click a fixture to select it · Edit dimensions in Properties or switch to 2D</span></>}</div>
       </section>
       <aside className="panel properties"><div className="panel-heading"><h2>Properties</h2><span className="badge">METERS</span></div>{selected ? <Properties key={JSON.stringify(selected)} fixture={selected}

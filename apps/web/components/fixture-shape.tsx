@@ -5,7 +5,8 @@ import Konva from 'konva';
 import { Group, Line, Rect, Transformer } from 'react-konva';
 import type { Fixture, Point } from '@floorx/floor-model';
 import { changesFromNodeTransform, hasMeaningfulTransform } from './fixture-transform';
-import { fixtureCenterLine, fixtureOutline } from './fixture-appearance';
+import { fixtureCenterLine, fixtureFrontLine, fixtureOutline } from './fixture-appearance';
+import { styleRotateAnchor } from './rotate-icon';
 
 export default function FixtureShape({ fixture, position, selected, transformable, editable, pixelsPerMeter, fill, onSelect, onSelectClick,
   onContextMenu, onMoveStart, onMovePreview, onMoveEnd, onTransformStart, onTransformEnd, onTransformFinish, onError }: {
@@ -44,6 +45,10 @@ export default function FixtureShape({ fixture, position, selected, transformabl
     transformer.current?.forceUpdate();
   };
   const { width, depth } = fixture.dimensions;
+  const isShelving = ['gondola', 'wall-shelf', 'rack'].includes(fixture.definition.id) || typeof fixture.properties.rows === 'number';
+  const rowCount = typeof fixture.properties.rows === 'number'
+    ? Math.max(1, Math.round(Number(fixture.properties.rows)))
+    : (isShelving ? 2 : 1);
   return <>
     <Group ref={shape} x={position.x} y={position.z} rotation={fixture.rotation * 180 / Math.PI}
       draggable={editable} _useStrictMode
@@ -89,7 +94,15 @@ export default function FixtureShape({ fixture, position, selected, transformabl
         stroke={selected ? '#0b8067' : fixtureOutline} strokeWidth={(selected ? 3 : 1) / pixelsPerMeter}
         shadowColor="#123e32" shadowOpacity={0.12}
         shadowBlur={selected ? 6 / pixelsPerMeter : 0} />
-      <Line points={[-width / 2, 0, width / 2, 0]} stroke={fixtureCenterLine} strokeWidth={1 / pixelsPerMeter} listening={false} />
+      {Array.from({ length: rowCount - 1 }, (_, i) => {
+        const lineY = -depth / 2 + (depth * (i + 1)) / rowCount;
+        return <Line key={`row-${i}`} points={[-width / 2, lineY, width / 2, lineY]}
+          stroke={fixtureCenterLine} strokeWidth={1 / pixelsPerMeter} listening={false} />;
+      })}
+      {isShelving && <Line points={[-width / 2, depth / 2, width / 2, depth / 2]}
+        stroke={selected ? '#044e3f' : fixtureFrontLine}
+        strokeWidth={(selected ? 5 : 3.5) / pixelsPerMeter}
+        lineCap="square" listening={false} />}
       {selected && !transformable && <Rect x={-width / 2 - 5 / pixelsPerMeter} y={-depth / 2 - 5 / pixelsPerMeter}
         width={width + 10 / pixelsPerMeter} height={depth + 10 / pixelsPerMeter}
         stroke="#087c63" strokeWidth={2 / pixelsPerMeter} dash={[6 / pixelsPerMeter, 4 / pixelsPerMeter]}
@@ -98,9 +111,10 @@ export default function FixtureShape({ fixture, position, selected, transformabl
     {transformable && editable && <Transformer ref={transformer} flipEnabled={false} centeredScaling
       keepRatio={false} useSingleNodeRotation ignoreStroke
       enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']}
-      anchorSize={10} rotateAnchorOffset={26}
+      anchorSize={10} rotateAnchorOffset={22} rotateAnchorCursor="grab"
       borderStroke="#236d59" borderStrokeWidth={1}
       anchorFill="white" anchorStroke="#236d59" anchorStrokeWidth={1}
+      anchorStyleFunc={styleRotateAnchor}
       boundBoxFunc={(oldBox, newBox) => Math.abs(newBox.width) < 10 || Math.abs(newBox.height) < 10 ? oldBox : newBox}
       onMouseDown={(event) => { event.cancelBubble = true; }}
       onTouchStart={(event) => { event.cancelBubble = true; }} />}

@@ -36,3 +36,38 @@ it('stores a rotated canvas resize as one undoable edit and round trips the resu
   store.getState().undo();
   expect(store.getState().document.fixtures[0]).toEqual(fixture);
 });
+
+it('updates shelving fixture rows and preserves properties and scaled height in document', () => {
+  const store = createEditorStore(parseFloorDocument(sample));
+  const fixture = store.getState().document.fixtures[0];
+  expect(fixture.dimensions.height).toBe(1.8);
+  // Scaling rows 2 -> 4 doubles height to 3.6
+  store.getState().updateFixture(fixture.id, {
+    dimensions: { ...fixture.dimensions, height: 3.6 },
+    properties: { ...fixture.properties, rows: 4 },
+  });
+  const updated = store.getState().document.fixtures[0];
+  expect(updated.properties.rows).toBe(4);
+  expect(updated.dimensions.height).toBe(3.6);
+  const loaded = deserializeFloorDocument(serializeFloorDocument(store.getState().document));
+  expect(loaded.fixtures[0].properties.rows).toBe(4);
+  expect(loaded.fixtures[0].dimensions.height).toBe(3.6);
+  store.getState().undo();
+  expect(store.getState().document.fixtures[0].dimensions.height).toBe(1.8);
+});
+
+it('rotates a fixture by 90 degrees with normalization and round-trips through undo/redo', async () => {
+  const { normalizeRotation } = await import('@floorx/floor-model');
+  const store = createEditorStore(parseFloorDocument(sample));
+  const fixture = store.getState().document.fixtures[0];
+  const initialRotation = fixture.rotation;
+  store.getState().updateFixture(fixture.id, {
+    rotation: normalizeRotation(fixture.rotation + Math.PI / 2),
+  });
+  const rotated = store.getState().document.fixtures[0];
+  expect(rotated.rotation).toBeCloseTo(normalizeRotation(initialRotation + Math.PI / 2));
+  store.getState().undo();
+  expect(store.getState().document.fixtures[0].rotation).toBe(initialRotation);
+  store.getState().redo();
+  expect(store.getState().document.fixtures[0].rotation).toBeCloseTo(normalizeRotation(initialRotation + Math.PI / 2));
+});

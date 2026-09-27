@@ -13,7 +13,7 @@
   "definitions": [{
     "id": "gondola", "version": 1, "name": "Standard gondola", "kind": "rectangular-fixture",
     "defaultDimensions": { "width": 4, "depth": 0.8, "height": 1.8 },
-    "defaultProperties": { "category": "general" }
+    "defaultProperties": { "category": "general", "rows": 2 }
   }],
   "fixtures": [{
     "id": "shelf-1", "definition": { "id": "gondola", "version": 1 },

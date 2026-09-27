@@ -1,4 +1,4 @@
-import { fixtureCenterLine, fixtureFill, fixtureOutline } from './fixture-appearance';
+import { fixtureCenterLine, fixtureFill, fixtureFrontLine, fixtureOutline } from './fixture-appearance';
 
 export function fixtureDragImageSize(dimensions: { width: number; depth: number }, pixelsPerMeter: number) {
   return {
@@ -8,7 +8,7 @@ export function fixtureDragImageSize(dimensions: { width: number; depth: number 
 }
 
 export function createFixtureDragImage(
-  dimensions: { width: number; depth: number }, pixelsPerMeter: number, definitionId: string,
+  dimensions: { width: number; depth: number }, pixelsPerMeter: number, definitionId: string, rows = 2,
 ) {
   if (typeof document === 'undefined') return null;
   const { width, height } = fixtureDragImageSize(dimensions, pixelsPerMeter);
@@ -37,11 +37,21 @@ export function createFixtureDragImage(
   context.strokeRect(0.5, 0.5, Math.max(0, width - 1), Math.max(0, height - 1));
   context.strokeStyle = fixtureCenterLine;
   context.lineWidth = 1;
-  context.beginPath();
-  const midY = Math.round(height / 2) + 0.5;
-  context.moveTo(0, midY);
-  context.lineTo(width, midY);
-  context.stroke();
+  for (let i = 1; i < rows; i++) {
+    context.beginPath();
+    const midY = Math.round((height * i) / rows) + 0.5;
+    context.moveTo(0, midY);
+    context.lineTo(width, midY);
+    context.stroke();
+  }
+  if (['gondola', 'wall-shelf', 'rack'].includes(definitionId) || rows > 1) {
+    context.strokeStyle = fixtureFrontLine;
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(0, height - 1.5);
+    context.lineTo(width, height - 1.5);
+    context.stroke();
+  }
 
   document.body.appendChild(canvas);
 

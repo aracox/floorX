@@ -35,7 +35,7 @@ export type EditorState = {
   selectAll: () => void;
   setViewport: (view: Viewport) => void;
   addFixture: (id: string, definition: ComponentDefinition, position: Point) => void;
-  updateFixture: (id: string, changes: Partial<Pick<Fixture, 'position' | 'rotation' | 'dimensions'>>) => void;
+  updateFixture: (id: string, changes: Partial<Pick<Fixture, 'position' | 'rotation' | 'dimensions' | 'properties'>>) => void;
   removeSelected: () => void;
   copySelected: () => void;
   pasteCopied: (ids: string[]) => void;
@@ -114,7 +114,11 @@ export function createEditorStore(initial: FloorDocument) {
         set({ selectedId: id, selectedIds: [id] });
       },
       updateFixture: (id, changes) => commit({ ...get().document,
-        fixtures: get().document.fixtures.map((f) => f.id === id ? { ...f, ...changes } : f) }),
+        fixtures: get().document.fixtures.map((f) => f.id === id ? {
+          ...f,
+          ...changes,
+          properties: changes.properties ? { ...f.properties, ...changes.properties } : f.properties,
+        } : f) }),
       removeSelected: () => {
         const ids = new Set(get().selectedIds);
         commit({ ...get().document, fixtures: get().document.fixtures.filter((fixture) => !ids.has(fixture.id)) });

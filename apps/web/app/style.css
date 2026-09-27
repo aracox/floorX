@@ -64,13 +64,16 @@ button:focus-visible, a:focus-visible, .import-button:focus-within { outline: 2p
 .canvas-toolbar .badge { margin-right: auto; }
 .canvas-toolbar button { padding: 5px 10px; }
 .view-switch { padding-left: 8px; border-left: 1px solid #dce3dd; }
-.floor-canvas { position: relative; background: #edf2ee; height: clamp(620px, calc(100vh - 250px), 900px); overflow: hidden; touch-action: none; outline: none; }
-.floor-viewer { height: clamp(620px, calc(100vh - 250px), 900px); background: #e8f0eb; }
+.floor-canvas { position: relative; background: #e2e8f0; height: clamp(620px, calc(100vh - 250px), 900px); overflow: hidden; touch-action: none; outline: none; }
+.floor-viewer { height: clamp(620px, calc(100vh - 250px), 900px); background: #cbd5e1; }
 .floor-viewer canvas { display: block; touch-action: none; }
-.floor-viewer-message { height: clamp(620px, calc(100vh - 250px), 900px); padding: 24px; display: grid; place-items: center; text-align: center; background: #e8f0eb; color: #456456; font-size: 14px; }
-.fixture-context-menu { position: absolute; z-index: 2; min-width: 150px; padding: 5px; background: white; border: 1px solid #cbd7ce; border-radius: 8px; box-shadow: 0 8px 24px #233e3629; }
-.fixture-context-menu button { width: 100%; text-align: left; color: #ad4a42; background: white; border: 0; }
-.fixture-context-menu button:hover, .fixture-context-menu button:focus-visible { background: #f9efed; filter: none; }
+.floor-viewer-message { height: clamp(620px, calc(100vh - 250px), 900px); padding: 24px; display: grid; place-items: center; text-align: center; background: #cbd5e1; color: #1e293b; font-size: 14px; }
+.fixture-context-menu { position: absolute; z-index: 2; min-width: 240px; padding: 6px; background: white; border: 1px solid #cbd7ce; border-radius: 8px; box-shadow: 0 8px 24px #233e3629; display: flex; flex-direction: column; gap: 2px; }
+.fixture-context-menu button { width: 100%; text-align: left; color: #1e293b; background: white; border: 0; border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; white-space: nowrap; }
+.fixture-context-menu button:hover, .fixture-context-menu button:focus-visible { background: #f1f5f9; color: #0f172a; filter: none; outline: none; }
+.fixture-context-menu button.danger { color: #dc2626; }
+.fixture-context-menu button.danger:hover, .fixture-context-menu button.danger:focus-visible { background: #fef2f2; color: #b91c1c; }
+.fixture-context-menu .menu-divider { margin: 4px 0; border: 0; border-top: 1px solid #e2e8f0; }
 .floor-canvas:focus-visible:not(.has-selection) { outline: 2px solid #267a61; outline-offset: -2px; }
 .floor-canvas.pan { cursor: grab; }
 .floor-canvas.pan:active { cursor: grabbing; }
@@ -100,3 +103,66 @@ button:focus-visible, a:focus-visible, .import-button:focus-within { outline: 2p
 .palette-items { max-height: 450px; overflow-y: auto; padding-bottom: 4px; }
 .palette-card { margin-bottom: 10px; }
 .property-name { display: block; font-size: 13px; margin-bottom: 7px; }
+
+/* Library Tabs */
+.library-tabs { display: grid; grid-template-columns: 1fr 1fr; background: #eef2ed; border-bottom: 1px solid #dce3dd; }
+.tab-btn { border: 0; border-radius: 0; background: transparent; color: #52685c; padding: 12px 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: all 0.15s ease; }
+.tab-btn:hover { background: #e3eae2; color: #173f34; }
+.tab-btn.active { background: white; color: #173f34; box-shadow: 0 2px 0 #236d59 inset; }
+
+/* SKU Catalog */
+.sku-catalog-section { padding: 12px 10px; display: flex; flex-direction: column; gap: 10px; }
+.sku-search-box input { width: 100%; padding: 8px 10px; font-size: 11px; border: 1px solid #d7e1d8; border-radius: 6px; background: #f8faf8; }
+.sku-search-box input:focus { outline: 2px solid #236d59; }
+.sku-category-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+.sku-category-pills button { padding: 4px 7px; font-size: 10px; border-radius: 12px; font-weight: normal; }
+.sku-category-pills button.active { background: #236d59; color: white; border-color: #236d59; font-weight: bold; }
+.sku-category-pills button.secondary { background: white; color: #52685c; border: 1px solid #d0dbd2; }
+.sku-items-list { max-height: 520px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.sku-catalog-card { display: flex; gap: 8px; padding: 10px; background: #f9fbf9; border: 1px solid #e1e8e2; border-radius: 8px; cursor: grab; }
+.sku-catalog-card:hover { border-color: #236d59; background: #ffffff; }
+.sku-card-preview { display: flex; align-items: center; justify-content: center; width: 44px; flex-shrink: 0; }
+.sku-visual-badge { width: 40px; height: 32px; border-radius: 4px; border: 2px solid; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.sku-visual-badge.bottle { width: 22px; height: 40px; border-radius: 8px 8px 3px 3px; }
+.sku-visual-badge.can { width: 34px; height: 34px; border-radius: 50%; }
+.sku-visual-badge.tub { border-radius: 6px; }
+.sku-packaging-type { font-size: 7px; font-weight: 900; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+.sku-card-details { flex: 1; min-width: 0; }
+.sku-brand-row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 9px; margin-bottom: 2px; }
+.sku-brand-tag { background: #e6ede7; color: #1e3f32; padding: 2px 5px; border-radius: 3px; font-weight: bold; }
+.sku-barcode { color: #88998f; font-family: monospace; }
+.sku-card-title { display: block; font-size: 11px; color: #1e3229; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.sku-card-sub { font-size: 9px; color: #728479; margin: 1px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-dims-row { font-size: 9px; color: #88998f; margin-bottom: 6px; }
+.sku-stock-btn { width: 100%; padding: 5px 8px; font-size: 10px; border-radius: 5px; background: #eaf3ed; color: #1b5847; border: 1px solid #b8d6c4; font-weight: 600; cursor: pointer; }
+.sku-stock-btn:hover { background: #236d59; color: white; border-color: #236d59; }
+
+/* Shelf Planogram Editor in Properties */
+.planogram-editor { margin-top: 16px; border-top: 2px dashed #dce3dd; padding-top: 14px; }
+.planogram-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.planogram-header h4 { margin: 0; font-size: 13px; color: #173f34; }
+.planogram-badge { font-size: 9px; font-weight: bold; background: #e0f2fe; color: #0369a1; padding: 3px 6px; border-radius: 4px; }
+.planogram-quick-actions { display: flex; gap: 6px; margin-bottom: 12px; }
+.planogram-photo-btn { flex: 1; padding: 7px 10px; font-size: 11px; background: #0284c7; border: 1px solid #0284c7; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.planogram-photo-btn:hover { background: #0369a1; }
+.planogram-clear-btn { padding: 7px 10px; font-size: 11px; border-radius: 6px; }
+.planogram-tiers-list { display: flex; flex-direction: column; gap: 10px; max-height: 480px; overflow-y: auto; padding-right: 2px; }
+.planogram-tier-card { border: 1px solid #dce5dd; border-radius: 8px; background: #fdfefe; padding: 8px 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+.tier-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.tier-header strong { font-size: 11px; color: #1e3f32; }
+.tier-items-count { font-size: 9px; color: #728479; }
+.tier-empty-label { font-size: 10px; color: #94a3b8; font-style: italic; margin: 4px 0 8px; }
+.tier-items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.sku-tier-item { background: #f1f5f2; border: 1px solid #e2eae3; border-radius: 6px; padding: 6px 8px; }
+.sku-item-info { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.sku-color-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
+.sku-name { flex: 1; font-size: 11px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sku-remove-btn { width: 18px; height: 18px; padding: 0; line-height: 16px; border-radius: 50%; background: #e2e8f0; color: #64748b; border: 0; font-size: 13px; font-weight: bold; cursor: pointer; }
+.sku-remove-btn:hover { background: #ef4444; color: white; }
+.sku-controls-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.sku-stepper label { display: block; font-size: 8px; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
+.stepper-box { display: flex; align-items: center; background: white; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; }
+.stepper-box button { width: 20px; height: 22px; padding: 0; border: 0; background: #f8fafc; color: #334155; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 0; }
+.stepper-box button:hover { background: #e2e8f0; }
+.stepper-box span { flex: 1; text-align: center; font-size: 10px; font-weight: bold; color: #0f172a; }
+.tier-add-sku-box select { width: 100%; padding: 5px; font-size: 10px; border: 1px solid #cbd5e1; border-radius: 5px; background: white; color: #334155; }
