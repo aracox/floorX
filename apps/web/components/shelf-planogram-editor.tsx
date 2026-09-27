@@ -116,7 +116,7 @@ export default function ShelfPlanogramEditor({
 
     const newItem: PlacedSkuItem = {
       skuId,
-      facings: sku.defaultFacing ?? 2,
+      facings: 1,
       stack: sku.defaultStack ?? 1,
       depth: sku.defaultDepth ?? 3,
     };
@@ -207,10 +207,14 @@ export default function ShelfPlanogramEditor({
                     return (
                       <div key={`${item.skuId}-${idx}`} className="sku-tier-item">
                         <div className="sku-item-info">
-                          <span
-                            className="sku-color-dot"
-                            style={{ backgroundColor: sku.appearance.primaryColor }}
-                          />
+                          {sku.imageUrl ? (
+                            <img src={sku.imageUrl} alt={sku.name} className="sku-tier-thumb" />
+                          ) : (
+                            <span
+                              className="sku-color-dot"
+                              style={{ backgroundColor: sku.appearance.primaryColor }}
+                            />
+                          )}
                           <span className="sku-name" title={sku.name}>
                             {sku.name}
                           </span>

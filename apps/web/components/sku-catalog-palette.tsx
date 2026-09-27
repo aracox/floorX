@@ -58,6 +58,18 @@ export default function SkuCatalogPalette({
     ? Number(selectedFixture.properties.rows)
     : (isShelving ? 2 : 0);
 
+  const stockedFacingsBySku = useMemo(() => {
+    if (!selectedFixture || !isShelving) return {};
+    const planogram = getFixturePlanogram(selectedFixture);
+    const counts: Record<string, number> = {};
+    for (const tier of planogram) {
+      for (const item of tier.items || []) {
+        counts[item.skuId] = (counts[item.skuId] || 0) + item.facings;
+      }
+    }
+    return counts;
+  }, [selectedFixture, isShelving]);
+
   const handleStockSku = (sku: ProductSku) => {
     if (!selectedFixture || !isShelving) {
       onReport('Select a shelf or gondola on the floor to stock this SKU.', true);
@@ -73,22 +85,37 @@ export default function SkuCatalogPalette({
     const planogram = getFixturePlanogram(selectedFixture);
     const existingTier = planogram.find((t) => t.tierIndex === targetTier);
 
-    const newItem: PlacedSkuItem = {
-      skuId: sku.id,
-      facings: sku.defaultFacing ?? 2,
-      stack: sku.defaultStack ?? 1,
-      depth: sku.defaultDepth ?? 3,
-    };
-
     let nextPlanogram: TierPlanogram[];
     if (existingTier) {
-      nextPlanogram = planogram.map((t) => {
-        if (t.tierIndex === targetTier) {
-          return { ...t, items: [...t.items, newItem] };
-        }
-        return t;
-      });
+      const existingItemIdx = existingTier.items.findIndex((it) => it.skuId === sku.id);
+      if (existingItemIdx >= 0) {
+        const currentItem = existingTier.items[existingItemIdx];
+        const nextItems = [...existingTier.items];
+        nextItems[existingItemIdx] = {
+          ...currentItem,
+          facings: currentItem.facings + 1,
+        };
+        nextPlanogram = planogram.map((t) =>
+          t.tierIndex === targetTier ? { ...t, items: nextItems } : t
+        );
+      } else {
+        const newItem: PlacedSkuItem = {
+          skuId: sku.id,
+          facings: 1,
+          stack: sku.defaultStack ?? 1,
+          depth: sku.defaultDepth ?? 3,
+        };
+        nextPlanogram = planogram.map((t) =>
+          t.tierIndex === targetTier ? { ...t, items: [...t.items, newItem] } : t
+        );
+      }
     } else {
+      const newItem: PlacedSkuItem = {
+        skuId: sku.id,
+        facings: 1,
+        stack: sku.defaultStack ?? 1,
+        depth: sku.defaultDepth ?? 3,
+      };
       nextPlanogram = [...planogram, { tierIndex: targetTier, items: [newItem] }];
     }
 
@@ -97,7 +124,40 @@ export default function SkuCatalogPalette({
       planogram: nextPlanogram as any,
     });
 
-    onReport(`Stocked ${sku.name} onto Tier ${targetTier + 1} (${newItem.facings} facings).`);
+    onReport(`Added facing of ${sku.name} on Tier ${targetTier + 1}.`);
+  };
+
+  const handleUnstockSku = (sku: ProductSku) => {
+    if (!selectedFixture || !isShelving) return;
+    const planogram = getFixturePlanogram(selectedFixture);
+
+    let removed = false;
+    const nextPlanogram = planogram
+      .map((t) => {
+        if (removed) return t;
+        const itemIdx = t.items.findIndex((it) => it.skuId === sku.id);
+        if (itemIdx >= 0) {
+          removed = true;
+          const currentItem = t.items[itemIdx];
+          if (currentItem.facings > 1) {
+            const nextItems = [...t.items];
+            nextItems[itemIdx] = { ...currentItem, facings: currentItem.facings - 1 };
+            return { ...t, items: nextItems };
+          } else {
+            return { ...t, items: t.items.filter((_, idx) => idx !== itemIdx) };
+          }
+        }
+        return t;
+      })
+      .filter((t) => t.items.length > 0);
+
+    if (removed) {
+      onUpdateFixtureProperties(selectedFixture.id, {
+        ...selectedFixture.properties,
+        planogram: nextPlanogram as any,
+      });
+      onReport(`Removed 1 facing of ${sku.name} from shelf.`);
+    }
   };
 
   return (
@@ -130,52 +190,99 @@ export default function SkuCatalogPalette({
           const widthCm = Math.round(sku.dimensions.width * 100);
           const depthCm = Math.round(sku.dimensions.depth * 100);
           const heightCm = Math.round(sku.dimensions.height * 100);
+          const stockedCount = stockedFacingsBySku[sku.id] || 0;
 
           return (
             <div
               key={sku.id}
-              className="sku-catalog-card"
+              className={`sku-catalog-card ${stockedCount > 0 ? 'is-stocked' : ''}`}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('application/floorx-sku', sku.id);
                 e.dataTransfer.setData('text/plain', sku.id);
               }}
+              title={`${sku.name}\n${sku.nameTh}\nBarcode: ${sku.barcode}\n${widthCm}×${depthCm}×${heightCm} cm${stockedCount > 0 ? `\n(${stockedCount} facings on selected shelf)` : ''}`}
             >
               <div className="sku-card-preview">
-                <div
-                  className={`sku-visual-badge ${sku.packaging}`}
-                  style={{
-                    backgroundColor: sku.appearance.primaryColor,
-                    borderColor: sku.appearance.secondaryColor ?? sku.appearance.primaryColor,
-                  }}
-                >
-                  <span className="sku-packaging-type">{sku.packaging.toUpperCase()}</span>
-                </div>
+                {sku.imageUrl ? (
+                  <img
+                    src={sku.imageUrl}
+                    alt={sku.name}
+                    className="sku-product-img"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div
+                    className={`sku-visual-badge ${sku.packaging}`}
+                    style={{
+                      backgroundColor: sku.appearance.primaryColor,
+                      borderColor: sku.appearance.secondaryColor ?? sku.appearance.primaryColor,
+                    }}
+                  >
+                    <span className="sku-packaging-type">{sku.packaging.slice(0, 3).toUpperCase()}</span>
+                  </div>
+                )}
               </div>
 
               <div className="sku-card-details">
-                <div className="sku-brand-row">
+                <div className="sku-card-header">
+                  <strong className="sku-card-title">{sku.name}</strong>
+                </div>
+                <div className="sku-card-meta">
                   <span className="sku-brand-tag">{sku.brand}</span>
-                  <span className="sku-barcode">{sku.barcode}</span>
+                  <span className="sku-dims">{widthCm}×{depthCm}×{heightCm} cm</span>
                 </div>
-                <strong className="sku-card-title">{sku.name}</strong>
-                <p className="sku-card-sub">{sku.nameTh}</p>
-                <div className="sku-dims-row">
-                  <span>{widthCm}×{depthCm}×{heightCm} cm</span>
-                </div>
+              </div>
 
-                <button
-                  type="button"
-                  className="sku-stock-btn"
-                  onClick={() => handleStockSku(sku)}
-                  title={
-                    selectedFixture && isShelving
-                      ? `Stock onto Tier ${(sku.recommendedTier ?? 0) + 1} of selected shelf`
-                      : 'Select a shelf fixture to stock'
-                  }
-                >
-                  + Put on shelf
-                </button>
+              <div className="sku-card-actions">
+                {stockedCount > 0 ? (
+                  <div className="sku-card-stepper">
+                    <button
+                      type="button"
+                      className="sku-stock-btn sku-minus-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnstockSku(sku);
+                      }}
+                      title={`Remove 1 facing of ${sku.name} from shelf`}
+                      aria-label={`Remove 1 facing of ${sku.name}`}
+                    >
+                      −
+                    </button>
+                    <span className="sku-stock-count" title={`${stockedCount} facings on shelf`}>
+                      {stockedCount}
+                    </span>
+                    <button
+                      type="button"
+                      className="sku-stock-btn sku-plus-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStockSku(sku);
+                      }}
+                      title={`Add another facing of ${sku.name} to shelf`}
+                      aria-label={`Add another facing of ${sku.name}`}
+                    >
+                      +
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="sku-stock-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStockSku(sku);
+                    }}
+                    title={
+                      selectedFixture && isShelving
+                        ? `Stock onto Tier ${(sku.recommendedTier ?? 0) + 1} of selected shelf`
+                        : 'Select a shelf fixture to stock'
+                    }
+                    aria-label={`Add ${sku.name} to shelf`}
+                  >
+                    +
+                  </button>
+                )}
               </div>
             </div>
           );

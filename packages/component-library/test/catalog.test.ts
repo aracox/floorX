@@ -21,6 +21,7 @@ describe('versioned fixture catalog', () => {
       expect(sku.barcode).toMatch(/^\d{13}$/); // 13-digit EAN barcode
       expect(sku.name).toBeTruthy();
       expect(sku.brand).toBeTruthy();
+      expect(sku.imageUrl).toMatch(/^\/skus\/[\w.-]+$/);
       expect(sku.dimensions.width).toBeGreaterThan(0);
       expect(sku.dimensions.height).toBeGreaterThan(0);
       expect(sku.dimensions.depth).toBeGreaterThan(0);
